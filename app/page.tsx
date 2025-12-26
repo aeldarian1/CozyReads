@@ -361,10 +361,10 @@ export default function Home() {
                   d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                 />
               </svg>
-              <span className="hidden xs:inline sm:inline">CozyReads</span>
-              <span className="inline xs:hidden sm:hidden">Cozy</span>
+              <span className="hidden sm:inline">CozyReads</span>
+              <span className="inline sm:hidden">Cozy</span>
             </h1>
-            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 lg:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
               <button
                 onClick={toggleTheme}
                 className="p-2 sm:p-2.5 md:p-3 rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-xl shadow-md relative overflow-hidden group"
@@ -384,11 +384,11 @@ export default function Home() {
                   }}
                 />
               </button>
-              <div className="scale-90 sm:scale-100 md:scale-110">
+              <div className="scale-100 sm:scale-105 md:scale-110">
                 <UserButton
                   appearance={{
                     elements: {
-                      avatarBox: 'w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 ring-2 ring-white/30 hover:ring-amber-300/50 transition-all',
+                      avatarBox: 'w-10 h-10 sm:w-11 sm:h-11 ring-2 ring-white/30 hover:ring-amber-300/50 transition-all',
                     },
                   }}
                 />
@@ -406,7 +406,8 @@ export default function Home() {
             >
               <span className="relative z-10 flex items-center gap-1 sm:gap-2">
                 <span className="text-base sm:text-lg">📚</span>
-                <span className="hidden sm:inline">Add New Book</span>
+                <span className="hidden md:inline">Add New Book</span>
+                <span className="hidden sm:inline md:hidden">Add Book</span>
                 <span className="inline sm:hidden">Add</span>
               </span>
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
