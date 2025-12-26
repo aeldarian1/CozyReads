@@ -20,8 +20,9 @@ model User {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  books       Book[]
-  collections Collection[]
+  books         Book[]
+  collections   Collection[]
+  importHistory ImportHistory[]
 
   @@index([clerkId])
   @@index([email])
@@ -43,6 +44,13 @@ model Book {
   totalPages    Int?
   dateAdded     DateTime @default(now())
   dateFinished  DateTime?
+
+  // External source tracking for imports
+  goodreadsId      String?
+  externalSource   String?  // "goodreads", "google-books", "manual", etc.
+  externalMetadata Json?    // Store additional metadata (shelf names, original dates, etc.)
+  importedAt       DateTime?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -84,4 +92,22 @@ model BookCollection {
   @@unique([bookId, collectionId])
   @@index([bookId])
   @@index([collectionId])
+}
+
+model ImportHistory {
+  id           String   @id @default(uuid())
+  userId       String
+  source       String   // "goodreads-csv", etc.
+  fileName     String
+  totalRows    Int
+  successCount Int
+  skipCount    Int      // Duplicates skipped
+  errorCount   Int
+  errors       Json?    // Array of error details
+  importedAt   DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([importedAt])
 }

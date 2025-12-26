@@ -166,7 +166,13 @@ export function Analytics({ books }: { books: Book[] }) {
 
         {/* Top Rated Books */}
         <ChartCard title="🏆 Top Rated Books">
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+          <div
+            className="space-y-3 max-h-[300px] overflow-y-auto pr-4"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'var(--warm-brown) transparent',
+            }}
+          >
             {books
               .filter((b) => b.rating > 0)
               .sort((a, b) => b.rating - a.rating)
@@ -183,7 +189,7 @@ export function Analytics({ books }: { books: Book[] }) {
                   <span className="text-2xl font-black" style={{ color: 'var(--warm-brown)' }}>
                     #{idx + 1}
                   </span>
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-bold text-sm line-clamp-1" style={{ color: 'var(--text-dark)' }}>
                       {book.title}
                     </p>
@@ -191,7 +197,7 @@ export function Analytics({ books }: { books: Book[] }) {
                       {book.author}
                     </p>
                   </div>
-                  <div className="text-lg font-bold" style={{ color: 'var(--warm-brown)' }}>
+                  <div className="text-lg font-bold flex-shrink-0" style={{ color: 'var(--warm-brown)' }}>
                     {'★'.repeat(book.rating)}
                   </div>
                 </div>

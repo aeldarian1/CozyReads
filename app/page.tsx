@@ -13,6 +13,7 @@ import { ReadingGoal } from '@/components/ReadingGoal';
 import { Analytics } from '@/components/Analytics';
 import { QuickEditMenu } from '@/components/QuickEditMenu';
 import { CollectionsManager } from '@/components/CollectionsManager';
+import { ImportGoodreadsModal } from '@/components/ImportGoodreadsModal';
 
 export type Book = {
   id: string;
@@ -46,6 +47,7 @@ export default function Home() {
   const [collections, setCollections] = useState<{ id: string; name: string; icon: string; color: string }[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [sortBy, setSortBy] = useState('dateAdded');
@@ -367,7 +369,7 @@ export default function Home() {
             <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
               <button
                 onClick={toggleTheme}
-                className="p-2 sm:p-2.5 md:p-3 rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-xl shadow-md relative overflow-hidden group"
+                className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 flex items-center justify-center rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-xl shadow-md relative overflow-hidden group"
                 style={{
                   background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.2) 0%, rgba(212, 165, 116, 0.3) 100%)',
                   border: '2px solid rgba(255, 255, 255, 0.3)',
@@ -384,37 +386,57 @@ export default function Home() {
                   }}
                 />
               </button>
-              <div className="scale-100 sm:scale-105 md:scale-110">
-                <UserButton
-                  appearance={{
-                    elements: {
-                      avatarBox: 'w-10 h-10 sm:w-11 sm:h-11 ring-2 ring-white/30 hover:ring-amber-300/50 transition-all',
-                    },
-                  }}
-                />
-              </div>
-              <button
-                onClick={handleAddBook}
-              className="px-3 py-2 sm:px-5 sm:py-3 md:px-7 md:py-3.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
-              style={{
-                background: 'var(--gradient-accent)',
-                color: theme === 'dark' ? '#1a1816' : '#2d1f15',
-                boxShadow: '0 6px 20px rgba(201, 169, 97, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
-                border: '2px solid rgba(255, 255, 255, 0.4)',
-                textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)'
-              }}
-            >
-              <span className="relative z-10 flex items-center gap-1 sm:gap-2">
-                <span className="text-base sm:text-lg">📚</span>
-                <span className="hidden md:inline">Add New Book</span>
-                <span className="hidden sm:inline md:hidden">Add Book</span>
-                <span className="inline sm:hidden">Add</span>
-              </span>
-              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{
-                  background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: 'w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 ring-2 ring-white/30 hover:ring-amber-300/50 transition-all',
+                  },
                 }}
               />
+              <button
+                onClick={() => setIsImportModalOpen(true)}
+                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
+                style={{
+                  background: 'linear-gradient(135deg, #6b5d4f 0%, #8b6f47 100%)',
+                  color: '#fef3e2',
+                  boxShadow: '0 6px 20px rgba(107, 93, 79, 0.4)',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg">📥</span>
+                  <span className="hidden lg:inline">Import from Goodreads</span>
+                  <span className="hidden sm:inline lg:hidden">Import</span>
+                  <span className="inline sm:hidden">📥</span>
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
+                  }}
+                />
+              </button>
+              <button
+                onClick={handleAddBook}
+                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
+                style={{
+                  background: 'var(--gradient-accent)',
+                  color: theme === 'dark' ? '#1a1816' : '#2d1f15',
+                  boxShadow: '0 6px 20px rgba(201, 169, 97, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+                  border: '2px solid rgba(255, 255, 255, 0.4)',
+                  textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)'
+                }}
+              >
+                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg">📚</span>
+                  <span className="hidden md:inline">Add New Book</span>
+                  <span className="hidden sm:inline md:hidden">Add Book</span>
+                  <span className="inline sm:hidden">Add</span>
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
+                  }}
+                />
               </button>
             </div>
           </div>
@@ -526,6 +548,16 @@ export default function Home() {
           onQuickUpdate={(updates) => handleQuickUpdate(quickEditMenu.book.id, updates)}
         />
       )}
+
+      {/* Import from Goodreads Modal */}
+      <ImportGoodreadsModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImportComplete={() => {
+          loadBooks();
+          loadCollections();
+        }}
+      />
     </div>
   );
 }
