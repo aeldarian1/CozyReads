@@ -37,7 +37,9 @@ function isSummaryOrStudyGuide(title: string): boolean {
     'cliffsnotes',
     'book summary',
     'analysis',
+    'interpretation',
     'lektürehilfen', // German study guides
+    'lektüreschlüssel', // German study keys
     'erläuterungen', // German explanations
     'guide to',
     'companion',
@@ -46,6 +48,45 @@ function isSummaryOrStudyGuide(title: string): boolean {
   ];
 
   return summaryIndicators.some(indicator => lowerTitle.includes(indicator));
+}
+
+/**
+ * Detects if a description is likely in German (or other non-English languages)
+ * Returns true if the text appears to be non-English
+ */
+function isNonEnglishDescription(description: string): boolean {
+  if (!description || description.length < 50) return false;
+
+  const lowerDesc = description.toLowerCase();
+
+  // German indicators
+  const germanIndicators = [
+    'sie möchten',
+    'können',
+    'literatur verstehen',
+    'klausur',
+    'erläuterungen',
+    'lektürehilfe',
+    'interpretationen',
+    'schullektüren',
+    'verständlich',
+    'prägnant',
+    'schüler',
+    'lehrer',
+    'über',
+    'für',
+  ];
+
+  const germanMatches = germanIndicators.filter(indicator =>
+    lowerDesc.includes(indicator)
+  ).length;
+
+  // If 3+ German indicators found, likely German text
+  if (germanMatches >= 3) return true;
+
+  // Could add more language detection here (French, Spanish, etc.) if needed
+
+  return false;
 }
 
 /**
@@ -89,6 +130,11 @@ function scoreBookMatch(
     score -= 50;
   }
 
+  // HEAVY penalty for non-English descriptions (study guides in other languages)
+  if (document.description && isNonEnglishDescription(document.description)) {
+    score -= 60;
+  }
+
   return score;
 }
 
@@ -106,6 +152,11 @@ function isMatchingBook(
 
   // Reject summary books and study guides
   if (isSummaryOrStudyGuide(document.title || '')) {
+    return false;
+  }
+
+  // Reject books with non-English descriptions (likely foreign study guides)
+  if (document.description && isNonEnglishDescription(document.description)) {
     return false;
   }
 
