@@ -92,45 +92,47 @@ export default function StatisticsPage() {
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.05) 10px, rgba(255, 255, 255, 0.05) 20px)'
         }} />
-        <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-black text-amber-50 mb-2" style={{
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-50 mb-2" style={{
                 fontFamily: 'Playfair Display, serif',
                 textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
               }}>
                 📊 Reading Statistics
               </h1>
-              <p className="text-amber-100 text-sm" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+              <p className="text-amber-100 text-xs sm:text-sm" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                 Track your reading journey and insights
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex gap-2 w-full sm:w-auto">
               <button
                 onClick={() => window.location.href = '/api/export?format=json'}
-                className="px-4 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-sm"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
                 style={{
                   background: 'linear-gradient(135deg, #d4a574 0%, #c89b65 100%)',
                   color: '#2d1f15',
                   border: '2px solid rgba(255, 255, 255, 0.3)',
                 }}
               >
-                📥 Export JSON
+                <span className="hidden sm:inline">📥 Export JSON</span>
+                <span className="inline sm:hidden">📥 JSON</span>
               </button>
               <button
                 onClick={() => window.location.href = '/api/export?format=csv'}
-                className="px-4 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-sm"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
                 style={{
                   background: 'linear-gradient(135deg, #6d8a96 0%, #5d7052 100%)',
                   color: '#fff',
                   border: '2px solid rgba(255, 255, 255, 0.3)',
                 }}
               >
-                📊 Export CSV
+                <span className="hidden sm:inline">📊 Export CSV</span>
+                <span className="inline sm:hidden">📊 CSV</span>
               </button>
               <button
                 onClick={() => router.push('/')}
-                className="px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 sm:py-3 rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
                 style={{
                   background: 'rgba(255, 255, 255, 0.2)',
                   color: '#fff',
@@ -138,14 +140,15 @@ export default function StatisticsPage() {
                   backdropFilter: 'blur(10px)',
                 }}
               >
-                ← Back
+                <span className="hidden sm:inline">← Back</span>
+                <span className="inline sm:hidden">←</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Overview Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="rounded-2xl p-6 shadow-lg" style={{

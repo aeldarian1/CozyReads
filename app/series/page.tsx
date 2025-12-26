@@ -103,22 +103,22 @@ export default function SeriesPage() {
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.05) 10px, rgba(255, 255, 255, 0.05) 20px)'
         }} />
-        <div className="max-w-7xl mx-auto px-6 py-8 relative z-10">
-          <div className="flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 relative z-10">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-4xl font-black text-amber-50 mb-2" style={{
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-amber-50 mb-2" style={{
                 fontFamily: 'Playfair Display, serif',
                 textShadow: '2px 2px 4px rgba(0,0,0,0.3)'
               }}>
                 📚 Book Series
               </h1>
-              <p className="text-amber-100 text-sm" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
+              <p className="text-amber-100 text-xs sm:text-sm" style={{ textShadow: '0 1px 2px rgba(0,0,0,0.2)' }}>
                 Explore your book series collections
               </p>
             </div>
             <button
               onClick={() => router.push('/')}
-              className="px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+              className="px-4 sm:px-6 py-2 sm:py-3 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
               style={{
                 background: 'rgba(255, 255, 255, 0.2)',
                 color: '#fff',
@@ -126,13 +126,13 @@ export default function SeriesPage() {
                 backdropFilter: 'blur(10px)',
               }}
             >
-              ← Back to Library
+              ← Back
             </button>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {seriesList.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">📚</div>
