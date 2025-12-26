@@ -3,6 +3,22 @@
 import { UserButton } from '@clerk/nextjs';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useState } from 'react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import {
+  BookOpen,
+  Lightbulb,
+  Target,
+  LibraryBig,
+  BarChart3,
+  Plus,
+  Download,
+  Moon,
+  Sun,
+  Settings as SettingsIcon,
+  Menu,
+  X
+} from 'lucide-react';
 
 interface ModernNavigationProps {
   onAddBook: () => void;
@@ -12,13 +28,14 @@ interface ModernNavigationProps {
 export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps) {
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   const navItems = [
-    { icon: '📚', label: 'Library', href: '/', active: true },
-    { icon: '💡', label: 'Discover', href: '/recommendations' },
-    { icon: '🎯', label: 'Goals', href: '/goals' },
-    { icon: '📖', label: 'Series', href: '/series' },
-    { icon: '📊', label: 'Statistics', href: '/statistics' },
+    { icon: BookOpen, label: 'Library', href: '/' },
+    { icon: Lightbulb, label: 'Discover', href: '/recommendations' },
+    { icon: Target, label: 'Goals', href: '/goals' },
+    { icon: LibraryBig, label: 'Series', href: '/series' },
+    { icon: BarChart3, label: 'Statistics', href: '/statistics' },
   ];
 
   return (
@@ -38,41 +55,32 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
               color: 'var(--text-dark)',
             }}
           >
-            <svg
-              className="w-8 h-8"
-              style={{ color: 'var(--warm-brown)' }}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
+            <BookOpen className="w-8 h-8" style={{ color: 'var(--warm-brown)' }} strokeWidth={2.5} />
             CozyReads
           </h1>
         </div>
 
         {/* Navigation Items */}
         <nav className="flex-1 p-4 space-y-2">
-          {navItems.map((item) => (
-            <button
-              key={item.href}
-              onClick={() => window.location.href = item.href}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105"
-              style={{
-                background: item.active ? 'var(--gradient-accent)' : 'transparent',
-                color: item.active ? (theme === 'dark' ? '#1a1816' : '#2d1f15') : 'var(--text-dark)',
-                fontWeight: item.active ? '700' : '500',
-              }}
-            >
-              <span className="text-xl">{item.icon}</span>
-              <span>{item.label}</span>
-            </button>
-          ))}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105"
+                style={{
+                  background: isActive ? 'var(--gradient-accent)' : 'transparent',
+                  color: isActive ? (theme === 'dark' ? '#1a1816' : '#2d1f15') : 'var(--text-dark)',
+                  fontWeight: isActive ? '700' : '500',
+                }}
+              >
+                <Icon className="w-5 h-5" strokeWidth={2} />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
 
           {/* Divider */}
           <div className="my-4 h-px" style={{ background: 'var(--border-color)' }} />
@@ -87,7 +95,7 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
               fontWeight: '700',
             }}
           >
-            <span className="text-xl">➕</span>
+            <Plus className="w-5 h-5" strokeWidth={2} />
             <span>Add Book</span>
           </button>
 
@@ -100,7 +108,7 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
               fontWeight: '600',
             }}
           >
-            <span className="text-xl">📥</span>
+            <Download className="w-5 h-5" strokeWidth={2} />
             <span>Import Books</span>
           </button>
         </nav>
@@ -123,18 +131,18 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
                 color: 'var(--text-dark)',
               }}
             >
-              <span className="text-xl">{theme === 'light' ? '🌙' : '☀️'}</span>
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </button>
-            <button
-              onClick={() => window.location.href = '/settings'}
+            <Link
+              href="/settings"
               className="w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-300 hover:scale-110"
               style={{
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-dark)',
               }}
             >
-              <span className="text-xl">⚙️</span>
-            </button>
+              <SettingsIcon className="w-5 h-5" />
+            </Link>
           </div>
         </div>
       </aside>
@@ -153,20 +161,7 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
               color: 'var(--text-dark)',
             }}
           >
-            <svg
-              className="w-6 h-6"
-              style={{ color: 'var(--warm-brown)' }}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              strokeWidth={2.5}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-              />
-            </svg>
+            <BookOpen className="w-6 h-6" style={{ color: 'var(--warm-brown)' }} strokeWidth={2.5} />
             CozyReads
           </h1>
 
@@ -179,7 +174,7 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
                 color: 'var(--text-dark)',
               }}
             >
-              <span className="text-xl">{theme === 'light' ? '🌙' : '☀️'}</span>
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
             </button>
             <UserButton
               appearance={{
@@ -190,13 +185,14 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
             />
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="w-10 h-10 flex items-center justify-center rounded-lg"
+              className="w-10 h-10 flex items-center justify-center rounded-lg transition-transform duration-300"
               style={{
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-dark)',
+                transform: isMobileMenuOpen ? 'rotate(90deg)' : 'rotate(0deg)',
               }}
             >
-              <span className="text-xl">{isMobileMenuOpen ? '✕' : '☰'}</span>
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
@@ -210,24 +206,26 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
             }}
           >
             <nav className="space-y-2">
-              {navItems.map((item) => (
-                <button
-                  key={item.href}
-                  onClick={() => {
-                    window.location.href = item.href;
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
-                  style={{
-                    background: item.active ? 'var(--gradient-accent)' : 'var(--bg-tertiary)',
-                    color: item.active ? (theme === 'dark' ? '#1a1816' : '#2d1f15') : 'var(--text-dark)',
-                    fontWeight: item.active ? '700' : '600',
-                  }}
-                >
-                  <span className="text-xl">{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              ))}
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
+                    style={{
+                      background: isActive ? 'var(--gradient-accent)' : 'var(--bg-tertiary)',
+                      color: isActive ? (theme === 'dark' ? '#1a1816' : '#2d1f15') : 'var(--text-dark)',
+                      fontWeight: isActive ? '700' : '600',
+                    }}
+                  >
+                    <Icon className="w-5 h-5" strokeWidth={2} />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
 
               <div className="h-px my-2" style={{ background: 'var(--border-color)' }} />
 
@@ -243,7 +241,7 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
                   fontWeight: '700',
                 }}
               >
-                <span className="text-xl">➕</span>
+                <Plus className="w-5 h-5" strokeWidth={2} />
                 <span>Add Book</span>
               </button>
 
@@ -259,7 +257,7 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
                   fontWeight: '600',
                 }}
               >
-                <span className="text-xl">📥</span>
+                <Download className="w-5 h-5" strokeWidth={2} />
                 <span>Import Books</span>
               </button>
             </nav>
@@ -275,19 +273,23 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
         }}
       >
         <div className="flex items-center justify-around px-2 py-2">
-          {navItems.slice(0, 5).map((item) => (
-            <button
-              key={item.href}
-              onClick={() => window.location.href = item.href}
-              className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all"
-              style={{
-                color: item.active ? 'var(--warm-brown)' : 'var(--text-muted)',
-              }}
-            >
-              <span className="text-2xl">{item.icon}</span>
-              <span className="text-xs font-semibold">{item.label}</span>
-            </button>
-          ))}
+          {navItems.slice(0, 5).map((item) => {
+            const Icon = item.icon;
+            const isActive = pathname === item.href;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-all"
+                style={{
+                  color: isActive ? 'var(--warm-brown)' : 'var(--text-muted)',
+                }}
+              >
+                <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-xs font-semibold">{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
       </nav>
     </>

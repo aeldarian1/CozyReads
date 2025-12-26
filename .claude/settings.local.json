@@ -24,7 +24,10 @@
       "Bash(node test-detection-accuracy.js:*)",
       "Bash(npx prisma migrate dev:*)",
       "Bash(npx prisma db push)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill:*)"
     ]
   }
 }

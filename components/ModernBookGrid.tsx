@@ -1,5 +1,6 @@
 import { Book } from '@/lib/hooks/useBooks';
 import { ModernBookCard } from './ModernBookCard';
+import { BookOpen } from 'lucide-react';
 
 interface ModernBookGridProps {
   books: Book[];
@@ -13,7 +14,9 @@ export function ModernBookGrid({ books, onBookClick }: ModernBookGridProps) {
         background: 'var(--gradient-card)',
         border: '3px dashed var(--border-color)'
       }}>
-        <div className="text-8xl mb-6">📚</div>
+        <div className="flex justify-center mb-6">
+          <BookOpen className="w-24 h-24" style={{ color: 'var(--warm-brown)' }} strokeWidth={1.5} />
+        </div>
         <h3 className="text-3xl font-bold mb-3" style={{
           color: 'var(--text-dark)',
           fontFamily: 'Playfair Display, serif'

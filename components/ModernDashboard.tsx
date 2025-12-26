@@ -1,6 +1,7 @@
 'use client';
 
 import { Book } from '@/lib/hooks/useBooks';
+import { BookOpen, CheckCircle2, BookMarked, Flame } from 'lucide-react';
 
 interface ModernDashboardProps {
   currentlyReading: Book[];
@@ -20,25 +21,25 @@ export function ModernDashboard({ currentlyReading, stats }: ModernDashboardProp
         <StatCard
           label="Total Books"
           value={stats.totalBooks}
-          icon="📚"
+          Icon={BookOpen}
           gradient="from-blue-500 to-cyan-500"
         />
         <StatCard
           label="Books Read"
           value={stats.booksRead}
-          icon="✓"
+          Icon={CheckCircle2}
           gradient="from-green-500 to-emerald-500"
         />
         <StatCard
           label="Pages Read"
           value={stats.pagesRead}
-          icon="📖"
+          Icon={BookMarked}
           gradient="from-purple-500 to-pink-500"
         />
         <StatCard
           label="Day Streak"
           value={stats.currentStreak}
-          icon="🔥"
+          Icon={Flame}
           gradient="from-orange-500 to-red-500"
         />
       </div>
@@ -47,7 +48,7 @@ export function ModernDashboard({ currentlyReading, stats }: ModernDashboardProp
       {currentlyReading.length > 0 && (
         <div>
           <h2 className="text-2xl font-bold mb-4 flex items-center gap-2" style={{ color: 'var(--text-dark)' }}>
-            <span className="text-3xl">📖</span>
+            <BookMarked className="w-8 h-8" style={{ color: 'var(--warm-brown)' }} />
             Currently Reading
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -64,12 +65,12 @@ export function ModernDashboard({ currentlyReading, stats }: ModernDashboardProp
 function StatCard({
   label,
   value,
-  icon,
+  Icon,
   gradient,
 }: {
   label: string;
   value: number | string;
-  icon: string;
+  Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   gradient: string;
 }) {
   const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
@@ -82,7 +83,7 @@ function StatCard({
       }}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-3xl">{icon}</span>
+        <Icon className="w-8 h-8" strokeWidth={2} />
         <div className="text-right">
           <div className="text-3xl font-black">{displayValue}</div>
         </div>
@@ -116,10 +117,10 @@ function CurrentlyReadingCard({ book }: { book: Book }) {
             />
           ) : (
             <div
-              className="w-20 h-28 rounded-lg flex items-center justify-center text-3xl"
+              className="w-20 h-28 rounded-lg flex items-center justify-center"
               style={{ background: 'var(--warm-brown)', color: '#fff' }}
             >
-              📚
+              <BookOpen className="w-10 h-10" />
             </div>
           )}
         </div>
