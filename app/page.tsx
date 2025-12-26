@@ -526,6 +526,7 @@ export default function Home() {
       <ModernNavigation
         onAddBook={handleAddBook}
         onImport={() => setIsImportModalOpen(true)}
+        onShowShortcuts={() => setIsShortcutsHelpOpen(true)}
       />
 
       {/* Main Content with proper spacing for sidebar on desktop and mobile nav */}

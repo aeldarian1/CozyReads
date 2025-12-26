@@ -17,15 +17,17 @@ import {
   Sun,
   Settings as SettingsIcon,
   Menu,
-  X
+  X,
+  Keyboard
 } from 'lucide-react';
 
 interface ModernNavigationProps {
   onAddBook: () => void;
   onImport: () => void;
+  onShowShortcuts: () => void;
 }
 
-export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps) {
+export function ModernNavigation({ onAddBook, onImport, onShowShortcuts }: ModernNavigationProps) {
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -137,8 +139,20 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-dark)',
               }}
+              title="Toggle theme"
             >
               {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={onShowShortcuts}
+              className="w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-300 hover:scale-110"
+              style={{
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-dark)',
+              }}
+              title="Keyboard shortcuts (?)"
+            >
+              <Keyboard className="w-5 h-5" />
             </button>
             <Link
               href="/settings"
@@ -180,8 +194,20 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
                 background: 'var(--bg-tertiary)',
                 color: 'var(--text-dark)',
               }}
+              title="Toggle theme"
             >
               {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={onShowShortcuts}
+              className="w-10 h-10 flex items-center justify-center rounded-lg"
+              style={{
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-dark)',
+              }}
+              title="Keyboard shortcuts (?)"
+            >
+              <Keyboard className="w-5 h-5" />
             </button>
             <UserButton
               appearance={{
