@@ -27,10 +27,22 @@ export function Shelf({ books, bookColors, onBookClick, label, highlightedBookId
         </div>
       )}
 
-      {/* Shelf with books */}
-      <div className="shelf relative">
-        {/* Books container with better spacing */}
-        <div className="flex items-end gap-1.5 px-6 pb-4 overflow-x-auto">
+      {/* Shelf with books - 3D perspective */}
+      <div
+        className="shelf relative"
+        style={{
+          transformStyle: 'preserve-3d',
+          perspective: '1200px',
+        }}
+      >
+        {/* Books container */}
+        <div
+          className="flex items-end gap-2 px-8 pb-5 overflow-x-auto"
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: 'rotateX(2deg)',
+          }}
+        >
           {books.map((book) => (
             <BookSpine
               key={book.id}
@@ -42,28 +54,33 @@ export function Shelf({ books, bookColors, onBookClick, label, highlightedBookId
           ))}
         </div>
 
-        {/* Wooden shelf surface - enhanced */}
+        {/* Wooden shelf surface - 3D enhanced */}
         <div
           className="shelf-surface relative"
           style={{
-            height: '24px',
+            height: '28px',
             background: `
               linear-gradient(to bottom,
-                #9d8b7a 0%,
-                #8b7355 20%,
-                #7a6551 40%,
+                #a89477 0%,
+                #9d8b7a 15%,
+                #8b7355 30%,
+                #7a6551 45%,
                 #6d5d4f 60%,
-                #5d4e37 80%,
-                #4d3e27 100%
+                #5d4e37 75%,
+                #4d3e27 90%,
+                #3d2e17 100%
               )
             `,
-            borderRadius: '3px 3px 0 0',
+            borderRadius: '4px 4px 0 0',
             boxShadow: `
-              0 3px 8px rgba(0, 0, 0, 0.4),
-              inset 0 2px 1px rgba(255, 255, 255, 0.15),
-              inset 0 -1px 3px rgba(0, 0, 0, 0.3)
+              0 4px 12px rgba(0, 0, 0, 0.5),
+              0 8px 20px rgba(0, 0, 0, 0.3),
+              inset 0 3px 2px rgba(255, 255, 255, 0.2),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.4)
             `,
             position: 'relative',
+            transformStyle: 'preserve-3d',
+            transform: 'translateZ(-2px)',
           }}
         >
           {/* Wood grain texture */}
