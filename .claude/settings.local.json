@@ -16,7 +16,8 @@
       "Bash(git commit:*)",
       "Bash(vercel ls)",
       "Bash(npx tsc:*)",
-      "Bash(vercel --prod:*)"
+      "Bash(vercel --prod:*)",
+      "Bash(node -e:*)"
     ]
   }
 }

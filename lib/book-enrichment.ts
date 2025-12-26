@@ -605,25 +605,8 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
     // Hardcover GraphQL API - using search API
     const query = `
       query SearchBooks($query: String!) {
-        search(query: $query, query_type: "books", limit: 5) {
-          results {
-            ... on Book {
-              title
-              description
-              image
-              pages
-              release_date
-              cached_contributors {
-                name
-              }
-              editions {
-                isbn_10
-                isbn_13
-                publisher_name
-              }
-              cached_tags
-            }
-          }
+        search(query: $query, query_type: "books", per_page: 5) {
+          results
         }
       }
     `;
@@ -689,14 +672,14 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
 
         const data = await response.json();
 
-        if (!data.data?.search?.results || data.data.search.results.length === 0) continue;
+        if (!data.data?.search?.results?.hits || data.data.search.results.hits.length === 0) continue;
 
         // Find best match
-        const book = data.data.search.results[0]; // Use first result for now
+        const book = data.data.search.results.hits[0].document;
 
         // Extract cover image
-        if (book.image) {
-          result.coverUrl = book.image;
+        if (book.image?.url) {
+          result.coverUrl = book.image.url;
         }
 
         // Extract description
@@ -709,23 +692,12 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
           result.pageCount = book.pages;
         }
 
-        // Extract published date
-        if (book.release_date) {
-          result.publishedDate = book.release_date;
-        }
+        // Extract published date (not readily available in search results)
+        // publishedDate is usually in editions, which aren't in search results
 
-        // Extract publisher from editions
-        const edition = book.editions?.[0];
-        if (edition?.publisher_name) {
-          result.publisher = edition.publisher_name;
-        }
-
-        // Extract genres from cached_tags
-        if (book.cached_tags) {
-          const tags = Array.isArray(book.cached_tags) ? book.cached_tags : [];
-          if (tags.length > 0) {
-            result.genre = tags.slice(0, 3).join(', ');
-          }
+        // Extract genres
+        if (book.genres && Array.isArray(book.genres)) {
+          result.genre = book.genres.slice(0, 3).join(', ');
         }
 
         // If we found good data, break

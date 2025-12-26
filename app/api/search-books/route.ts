@@ -19,25 +19,8 @@ export async function GET(request: NextRequest) {
     try {
       const hardcoverQuery = `
         query SearchBooks($query: String!) {
-          search(query: $query, query_type: "books", limit: 15) {
-            results {
-              ... on Book {
-                title
-                description
-                image
-                pages
-                release_date
-                cached_contributors {
-                  name
-                }
-                editions {
-                  isbn_10
-                  isbn_13
-                  publisher_name
-                }
-                cached_tags
-              }
-            }
+          search(query: $query, query_type: "books", per_page: 15) {
+            results
           }
         }
       `;
@@ -74,22 +57,20 @@ export async function GET(request: NextRequest) {
           console.error('Hardcover GraphQL Errors:', JSON.stringify(hardcoverData.errors, null, 2));
         }
 
-        if (hardcoverData.data?.search?.results) {
-          books = hardcoverData.data.search.results.map((book: any) => {
-            // Extract author names from cached_contributors
-            const authors = book.cached_contributors
-              ?.map((c: any) => c.name)
-              .filter(Boolean) || [];
+        if (hardcoverData.data?.search?.results?.hits) {
+          books = hardcoverData.data.search.results.hits.map((hit: any) => {
+            const book = hit.document;
+
+            // Extract author names
+            const authors = book.author_names || [];
 
             // Extract ISBNs (prefer ISBN-13)
-            const edition = book.editions?.[0];
-            const isbn = edition?.isbn_13 || edition?.isbn_10 || '';
+            const isbns = book.isbns || [];
+            const isbn = isbns.find((i: string) => i.length === 13) || isbns[0] || '';
 
-            // Extract and normalize genres from cached_tags
-            const genreNames = Array.isArray(book.cached_tags)
-              ? book.cached_tags.join(', ')
-              : (book.cached_tags || '');
-            const normalizedGenres = normalizeGenres(genreNames, 3);
+            // Extract and normalize genres
+            const genres = book.genres || [];
+            const normalizedGenres = normalizeGenres(genres.join(', '), 3);
 
             return {
               title: book.title || '',
@@ -97,9 +78,9 @@ export async function GET(request: NextRequest) {
               isbn,
               genre: normalizedGenres || '',
               description: book.description || '',
-              coverUrl: book.image || '',
-              publisher: edition?.publisher_name || '',
-              publishedDate: book.release_date || '',
+              coverUrl: book.image?.url || '',
+              publisher: '',
+              publishedDate: '',
               totalPages: book.pages || null,
             };
           });
