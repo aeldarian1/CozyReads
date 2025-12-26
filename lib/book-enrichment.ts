@@ -195,6 +195,106 @@ function selectBestDescription(descriptions: Array<{ text: string | null; source
 }
 
 /**
+ * Cross-validate data from multiple sources to confirm accuracy
+ * Returns validated and consensus-based data
+ */
+function crossValidateData(
+  google: any,
+  hardcover: any,
+  worldCat: any,
+  openLib: any,
+  expectedTitle: string,
+  expectedAuthor: string
+): {
+  titleConfidence: number;
+  authorConfidence: number;
+  publisherConsensus: string | null;
+  dateConsensus: string | null;
+  pageCountConsensus: number | null;
+} {
+  const sources = [google, hardcover, worldCat, openLib].filter(s => s !== null);
+
+  // Title validation - check if sources agree on the title
+  let titleMatches = 0;
+  sources.forEach(source => {
+    if (source.title) {
+      const similarity = calculateSimilarity(source.title, expectedTitle);
+      if (similarity >= 0.8) titleMatches++;
+    }
+  });
+  const titleConfidence = sources.length > 0 ? titleMatches / sources.length : 0;
+
+  // Author validation - check if sources agree on the author
+  let authorMatches = 0;
+  sources.forEach(source => {
+    if (source.author) {
+      const similarity = calculateSimilarity(source.author, expectedAuthor);
+      if (similarity >= 0.7) authorMatches++;
+    }
+  });
+  const authorConfidence = sources.length > 0 ? authorMatches / sources.length : 0;
+
+  // Publisher consensus - use most common publisher
+  const publishers = [google?.publisher, hardcover?.publisher, worldCat?.publisher, openLib?.publisher]
+    .filter(p => p && p.length > 0);
+  const publisherConsensus = getMostCommon(publishers);
+
+  // Publication date consensus - use most common date
+  const dates = [google?.publishedDate, hardcover?.publishedDate, worldCat?.publishedDate, openLib?.publishedDate]
+    .filter(d => d && d.length > 0);
+  const dateConsensus = getMostCommon(dates);
+
+  // Page count consensus - use median if multiple sources agree
+  const pageCounts = [google?.pageCount, hardcover?.pageCount, worldCat?.pageCount, openLib?.pageCount]
+    .filter(p => p && p > 0) as number[];
+  const pageCountConsensus = pageCounts.length >= 2 ? getMedian(pageCounts) : pageCounts[0] || null;
+
+  return {
+    titleConfidence,
+    authorConfidence,
+    publisherConsensus,
+    dateConsensus,
+    pageCountConsensus,
+  };
+}
+
+/**
+ * Get the most common value from an array
+ */
+function getMostCommon(arr: string[]): string | null {
+  if (arr.length === 0) return null;
+
+  const frequency: Record<string, number> = {};
+  arr.forEach(item => {
+    const normalized = item.toLowerCase().trim();
+    frequency[normalized] = (frequency[normalized] || 0) + 1;
+  });
+
+  let maxCount = 0;
+  let mostCommon: string | null = null;
+  Object.entries(frequency).forEach(([value, count]) => {
+    if (count > maxCount) {
+      maxCount = count;
+      mostCommon = value;
+    }
+  });
+
+  // Return original casing from the array
+  if (!mostCommon) return null;
+  return arr.find(item => item.toLowerCase().trim() === mostCommon) || null;
+}
+
+/**
+ * Get median value from array of numbers
+ */
+function getMedian(arr: number[]): number {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1] + sorted[mid]) / 2) : sorted[mid];
+}
+
+/**
  * Score a book result based on how well it matches expected title/author
  * Returns a score from 0-100 (higher is better)
  */
@@ -423,10 +523,21 @@ export async function enrichBookFromGoogleBooks(
 
     result.genre = genres.size > 0 ? Array.from(genres).slice(0, 3).join(', ') : null;
 
-    // Metadata: Prefer Google Books (most reliable), fallback to Hardcover, then others
-    result.publisher = google?.publisher || hardcover?.publisher || worldCat?.publisher || openLib?.publisher || null;
-    result.publishedDate = google?.publishedDate || hardcover?.publishedDate || worldCat?.publishedDate || openLib?.publishedDate || null;
-    result.pageCount = google?.pageCount || hardcover?.pageCount || worldCat?.pageCount || openLib?.pageCount || null;
+    // Cross-validate metadata from all sources for accuracy
+    const validation = crossValidateData(google, hardcover, worldCat, openLib, title, author);
+
+    // Use consensus-based metadata (more reliable than single source)
+    result.publisher = validation.publisherConsensus || google?.publisher || hardcover?.publisher || null;
+    result.publishedDate = validation.dateConsensus || google?.publishedDate || hardcover?.publishedDate || null;
+    result.pageCount = validation.pageCountConsensus || google?.pageCount || hardcover?.pageCount || null;
+
+    // Log confidence levels for debugging (low confidence = potential data quality issue)
+    if (validation.titleConfidence < 0.5) {
+      console.warn(`Low title confidence (${(validation.titleConfidence * 100).toFixed(0)}%) for: ${title}`);
+    }
+    if (validation.authorConfidence < 0.5) {
+      console.warn(`Low author confidence (${(validation.authorConfidence * 100).toFixed(0)}%) for: ${author}`);
+    }
 
   } catch (error) {
     console.error('Error enriching book data:', error);
