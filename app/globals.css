@@ -221,9 +221,14 @@ h1, h2, h3, h4, h5, h6 {
   will-change: transform;
 }
 
-.book-spine:hover {
-  transform: translateX(-4px);
-  z-index: 10;
+/* 3D Book hover effect */
+.hover-3d-book {
+  transform: translateZ(0) rotateY(0) translateX(0);
+}
+
+.hover-3d-book:hover {
+  transform: translateZ(20px) rotateY(-8deg) translateX(-8px);
+  z-index: 20;
 }
 
 /* Hide scrollbar for horizontal book scrolling but keep functionality */

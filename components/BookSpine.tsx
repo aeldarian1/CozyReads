@@ -34,7 +34,7 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
   return (
     <div
       onClick={onClick}
-      className="book-3d-container group cursor-pointer"
+      className="book-3d-container group cursor-pointer hover-3d-book"
       style={{
         width: `${width}px`,
         height: `${height}px`,
@@ -43,12 +43,6 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
         position: 'relative',
       }}
       title={`${book.title} by ${book.author}${book.rating > 0 ? ` • ${'★'.repeat(book.rating)}` : ''}`}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateZ(20px) rotateY(-8deg) translateX(-8px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateZ(0) rotateY(0) translateX(0)';
-      }}
     >
       {/* Book spine (front face) */}
       <div
