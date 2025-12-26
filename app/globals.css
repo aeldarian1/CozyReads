@@ -425,3 +425,60 @@ h1, h2, h3, h4, h5, h6 {
 .hover-lift:hover {
   transform: translateY(-4px);
 }
+
+/* Accessibility Focus States */
+*:focus-visible {
+  outline: 3px solid var(--warm-brown);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+[data-theme='dark'] *:focus-visible {
+  outline-color: var(--gold);
+}
+
+/* Focus states for buttons */
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--warm-brown);
+  outline-offset: 3px;
+  transition: outline-offset 0.2s ease;
+}
+
+[data-theme='dark'] button:focus-visible,
+[data-theme='dark'] a:focus-visible {
+  outline-color: var(--gold);
+}
+
+/* Focus states for inputs */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--warm-brown);
+  outline-offset: 0px;
+  box-shadow: 0 0 0 4px rgba(139, 111, 71, 0.1);
+}
+
+[data-theme='dark'] input:focus-visible,
+[data-theme='dark'] textarea:focus-visible,
+[data-theme='dark'] select:focus-visible {
+  outline-color: var(--gold);
+  box-shadow: 0 0 0 4px rgba(201, 169, 97, 0.15);
+}
+
+/* Skip to main content link for screen readers */
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  z-index: 999;
+  padding: 1rem 1.5rem;
+  background: var(--warm-brown);
+  color: white;
+  text-decoration: none;
+  border-radius: 0.5rem;
+}
+
+.skip-to-main:focus {
+  left: 1rem;
+  top: 1rem;
+}
