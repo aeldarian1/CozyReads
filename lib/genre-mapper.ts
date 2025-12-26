@@ -86,6 +86,8 @@ const GENRE_MAPPINGS: Record<string, string> = {
   'fiction, historical': STANDARD_GENRES.HISTORICAL_FICTION,
   'fiction, historical, general': STANDARD_GENRES.HISTORICAL_FICTION,
   'fiction / historical': STANDARD_GENRES.HISTORICAL_FICTION,
+  'fiction, history': STANDARD_GENRES.HISTORICAL_FICTION,
+  'fiction, history, general': STANDARD_GENRES.HISTORICAL_FICTION,
 
   // Horror mappings
   'horror': STANDARD_GENRES.HORROR,
@@ -130,6 +132,8 @@ const GENRE_MAPPINGS: Record<string, string> = {
   'personal development': STANDARD_GENRES.SELF_HELP,
   'self-improvement': STANDARD_GENRES.SELF_HELP,
   'motivational': STANDARD_GENRES.SELF_HELP,
+  'help': STANDARD_GENRES.SELF_HELP,
+  'help & personal development': STANDARD_GENRES.SELF_HELP,
 
   // Business mappings
   'business': STANDARD_GENRES.BUSINESS,
@@ -142,6 +146,7 @@ const GENRE_MAPPINGS: Record<string, string> = {
   'science': STANDARD_GENRES.SCIENCE,
   'nature': STANDARD_GENRES.SCIENCE,
   'science & nature': STANDARD_GENRES.SCIENCE,
+  'biography & memoir, science & nature': STANDARD_GENRES.SCIENCE, // Will also extract Biography
   'biology': STANDARD_GENRES.SCIENCE,
   'physics': STANDARD_GENRES.SCIENCE,
   'astronomy': STANDARD_GENRES.SCIENCE,
@@ -172,6 +177,7 @@ const GENRE_MAPPINGS: Record<string, string> = {
   // Travel mappings
   'travel': STANDARD_GENRES.TRAVEL,
   'travel writing': STANDARD_GENRES.TRAVEL,
+  'fiction, travel': STANDARD_GENRES.TRAVEL,
 
   // Cooking mappings
   'cooking': STANDARD_GENRES.COOKING,
@@ -203,7 +209,23 @@ const IGNORE_PATTERNS = [
   /\d{4}s$/i, // Decades like "1990s"
   /^[A-Z]{2}$/i, // Country codes like "US"
   /^legends$/i,
+  /^general$/i, // Too vague
+  /^epic$/i, // Too vague without context
+  /^literature$/i, // Too vague
+  /^rich people$/i, // Too specific
 ];
+
+// Genre hierarchy - more specific genres that should replace general ones
+const GENRE_HIERARCHY: Record<string, string[]> = {
+  [STANDARD_GENRES.FANTASY]: ['Fiction'],
+  [STANDARD_GENRES.SCIENCE_FICTION]: ['Fiction'],
+  [STANDARD_GENRES.MYSTERY]: ['Fiction'],
+  [STANDARD_GENRES.ROMANCE]: ['Fiction'],
+  [STANDARD_GENRES.HISTORICAL_FICTION]: ['Fiction', 'History'],
+  [STANDARD_GENRES.HORROR]: ['Fiction'],
+  [STANDARD_GENRES.YOUNG_ADULT]: ['Fiction'],
+  [STANDARD_GENRES.CHILDRENS]: ['Fiction'],
+};
 
 /**
  * Normalizes a genre string from an API into standard categories
@@ -270,10 +292,25 @@ export function normalizeGenres(rawGenres: string | null | undefined, maxGenres 
     .map(g => normalizeGenre(g.trim()))
     .filter((g): g is string => g !== null);
 
-  // Remove duplicates and limit
-  const uniqueGenres = [...new Set(genres)].slice(0, maxGenres);
+  // Remove duplicates
+  const uniqueGenres = [...new Set(genres)];
 
-  return uniqueGenres.length > 0 ? uniqueGenres.join(', ') : null;
+  // Apply hierarchy filtering - remove parent genres if child genres are present
+  const filteredGenres = uniqueGenres.filter(genre => {
+    // Check if this genre is a parent of any other genre in the list
+    for (const otherGenre of uniqueGenres) {
+      if (otherGenre !== genre && GENRE_HIERARCHY[otherGenre]?.includes(genre)) {
+        // This genre is a parent of another genre, so exclude it
+        return false;
+      }
+    }
+    return true;
+  });
+
+  // Limit to maxGenres
+  const finalGenres = filteredGenres.slice(0, maxGenres);
+
+  return finalGenres.length > 0 ? finalGenres.join(', ') : null;
 }
 
 /**

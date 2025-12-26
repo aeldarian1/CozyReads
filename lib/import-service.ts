@@ -98,9 +98,15 @@ export async function importGoodreadsBooks(
   }
 
   // Process books in batches for better performance
-  const BATCH_SIZE = 50;
+  // Smaller batch size to avoid API rate limiting
+  const BATCH_SIZE = 10;
+
   for (let i = 0; i < books.length; i += BATCH_SIZE) {
     const batch = books.slice(i, i + BATCH_SIZE);
+    const batchNumber = Math.floor(i / BATCH_SIZE) + 1;
+    const totalBatches = Math.ceil(books.length / BATCH_SIZE);
+
+    console.log(`Processing batch ${batchNumber}/${totalBatches} (${i + 1}-${Math.min(i + BATCH_SIZE, books.length)} of ${books.length} books)...`);
 
     await Promise.all(
       batch.map(async (book, idx) => {
@@ -253,6 +259,11 @@ export async function importGoodreadsBooks(
         }
       })
     );
+
+    // Small delay between batches to respect API rate limits
+    if (i + BATCH_SIZE < books.length) {
+      await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
+    }
   }
 
   return result;
