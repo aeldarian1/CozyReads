@@ -2,20 +2,17 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Fuse from 'fuse.js';
-import { UserButton } from '@clerk/nextjs';
 import { useTheme } from '@/contexts/ThemeContext';
+import { ModernNavigation } from '@/components/ModernNavigation';
+import { ModernDashboard } from '@/components/ModernDashboard';
+import { ModernBookGrid } from '@/components/ModernBookGrid';
 import { BookGrid } from '@/components/BookGrid';
 import { BookshelfView } from '@/components/BookshelfView';
 import { ViewToggle, ViewMode } from '@/components/ViewToggle';
-import { StatsCards } from '@/components/StatsCards';
 import { AdvancedSearch, AdvancedFilters } from '@/components/AdvancedSearch';
 import { AddBookModal } from '@/components/AddBookModal';
 import { ViewBookModal } from '@/components/ViewBookModal';
-import { ReadingStreak } from '@/components/ReadingStreak';
-import { ReadingSpeed } from '@/components/ReadingSpeed';
-import { Analytics } from '@/components/Analytics';
 import { QuickEditMenu } from '@/components/QuickEditMenu';
-import { CollectionsManager } from '@/components/CollectionsManager';
 import { ImportGoodreadsModal } from '@/components/ImportGoodreadsModal';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 
@@ -465,237 +462,51 @@ export default function Home() {
     }
   };
 
+  // Calculate stats for ModernDashboard
+  const currentlyReading = useMemo(() => {
+    return books.filter(book => book.readingStatus === 'Currently Reading');
+  }, [books]);
+
+  const stats = useMemo(() => {
+    const finished = books.filter(b => b.readingStatus === 'Finished');
+    const pagesRead = finished.reduce((sum, book) => sum + (book.totalPages || 0), 0);
+
+    // Calculate streak (simplified - counts consecutive days with finished books)
+    const finishedDates = finished
+      .filter(b => b.dateFinished)
+      .map(b => new Date(b.dateFinished!).toDateString())
+      .sort();
+
+    let streak = 0;
+    const today = new Date().toDateString();
+    if (finishedDates.includes(today) || finishedDates.length > 0) {
+      streak = finishedDates.length > 0 ? 1 : 0; // Simplified streak calculation
+    }
+
+    return {
+      totalBooks: books.length,
+      booksRead: finished.length,
+      pagesRead,
+      currentStreak: streak,
+    };
+  }, [books]);
+
   return (
     <div className="min-h-screen">
-      {/* Navbar */}
-      <nav className="relative shadow-2xl backdrop-blur-sm transition-all duration-300" style={{
-        background: 'var(--gradient-navbar)',
-        boxShadow: '0 8px 32px rgba(74, 63, 53, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
-        borderBottom: `1px solid var(--border-color)`
-      }}>
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.03) 10px, rgba(255, 255, 255, 0.03) 20px)'
-        }} />
-        <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-6 relative z-10">
-          <div className="flex items-center justify-between gap-2">
-            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-amber-50 flex items-center gap-1 sm:gap-2 md:gap-3 hover:gap-2 sm:hover:gap-3 md:hover:gap-4 transition-all duration-300" style={{
-              fontFamily: 'Playfair Display, serif',
-              textShadow: '2px 2px 4px rgba(0,0,0,0.5), 0 0 15px rgba(201, 169, 97, 0.3)',
-              letterSpacing: '0.02em'
-            }}>
-              <svg
-                className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11 text-amber-200 drop-shadow-lg animate-pulse"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                strokeWidth={2.5}
-                style={{ filter: 'drop-shadow(0 0 8px rgba(201, 169, 97, 0.6))' }}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-                />
-              </svg>
-              <span className="hidden sm:inline">CozyReads</span>
-              <span className="inline sm:hidden">Cozy</span>
-            </h1>
-            <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-              <button
-                onClick={toggleTheme}
-                className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 flex items-center justify-center rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-xl shadow-md relative overflow-hidden group"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.2) 0%, rgba(212, 165, 116, 0.3) 100%)',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  backdropFilter: 'blur(10px)'
-                }}
-                title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
-              >
-                <span className="relative z-10 text-lg sm:text-xl md:text-2xl">
-                  {theme === 'light' ? '🌙' : '☀️'}
-                </span>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)'
-                  }}
-                />
-              </button>
-              <UserButton
-                appearance={{
-                  elements: {
-                    avatarBox: 'w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 ring-2 ring-white/30 hover:ring-amber-300/50 transition-all',
-                  },
-                }}
-              />
-              <button
-                onClick={() => window.location.href = '/settings'}
-                className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 flex items-center justify-center rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-xl shadow-md relative overflow-hidden group"
-                style={{
-                  background: 'linear-gradient(135deg, rgba(139, 111, 71, 0.2) 0%, rgba(160, 137, 104, 0.3) 100%)',
-                  border: '2px solid rgba(255, 255, 255, 0.3)',
-                  backdropFilter: 'blur(10px)'
-                }}
-                title="Settings"
-              >
-                <span className="relative z-10 text-lg sm:text-xl md:text-2xl">
-                  ⚙️
-                </span>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)'
-                  }}
-                />
-              </button>
-              <button
-                onClick={() => window.location.href = '/recommendations'}
-                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
-                style={{
-                  background: 'linear-gradient(135deg, #a08968 0%, #8b6f47 100%)',
-                  color: '#fef3e2',
-                  boxShadow: '0 6px 20px rgba(160, 137, 104, 0.4)',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
-                  <span className="text-base sm:text-lg">💡</span>
-                  <span className="hidden lg:inline">Discover</span>
-                  <span className="inline lg:hidden">💡</span>
-                </span>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
-                  }}
-                />
-              </button>
-              <button
-                onClick={() => window.location.href = '/goals'}
-                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
-                style={{
-                  background: 'linear-gradient(135deg, #c9a961 0%, #d4a574 100%)',
-                  color: '#2d1f15',
-                  boxShadow: '0 6px 20px rgba(201, 169, 97, 0.4)',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
-                  <span className="text-base sm:text-lg">🎯</span>
-                  <span className="hidden lg:inline">Goals</span>
-                  <span className="inline lg:hidden">🎯</span>
-                </span>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
-                  }}
-                />
-              </button>
-              <button
-                onClick={() => window.location.href = '/series'}
-                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
-                style={{
-                  background: 'linear-gradient(135deg, #8b6f47 0%, #a08968 100%)',
-                  color: '#fef3e2',
-                  boxShadow: '0 6px 20px rgba(139, 111, 71, 0.4)',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
-                  <span className="text-base sm:text-lg">📚</span>
-                  <span className="hidden lg:inline">Series</span>
-                  <span className="inline lg:hidden">📚</span>
-                </span>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
-                  }}
-                />
-              </button>
-              <button
-                onClick={() => window.location.href = '/statistics'}
-                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
-                style={{
-                  background: 'linear-gradient(135deg, #5d7052 0%, #6d8a96 100%)',
-                  color: '#fef3e2',
-                  boxShadow: '0 6px 20px rgba(93, 112, 82, 0.4)',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
-                  <span className="text-base sm:text-lg">📊</span>
-                  <span className="hidden lg:inline">Statistics</span>
-                  <span className="hidden sm:inline lg:hidden">Stats</span>
-                  <span className="inline sm:hidden">📊</span>
-                </span>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
-                  }}
-                />
-              </button>
-              <button
-                onClick={() => setIsImportModalOpen(true)}
-                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
-                style={{
-                  background: 'linear-gradient(135deg, #6b5d4f 0%, #8b6f47 100%)',
-                  color: '#fef3e2',
-                  boxShadow: '0 6px 20px rgba(107, 93, 79, 0.4)',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
-                  <span className="text-base sm:text-lg">📥</span>
-                  <span className="hidden lg:inline">Import Books</span>
-                  <span className="hidden sm:inline lg:hidden">Import</span>
-                  <span className="inline sm:hidden">📥</span>
-                </span>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
-                  }}
-                />
-              </button>
-              <button
-                onClick={handleAddBook}
-                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
-                style={{
-                  background: 'var(--gradient-accent)',
-                  color: theme === 'dark' ? '#1a1816' : '#2d1f15',
-                  boxShadow: '0 6px 20px rgba(201, 169, 97, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
-                  border: '2px solid rgba(255, 255, 255, 0.4)',
-                  textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)'
-                }}
-              >
-                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
-                  <span className="text-base sm:text-lg">📚</span>
-                  <span className="hidden md:inline">Add New Book</span>
-                  <span className="hidden sm:inline md:hidden">Add Book</span>
-                  <span className="inline sm:hidden">Add</span>
-                </span>
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  style={{
-                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
-                  }}
-                />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      {/* Modern Navigation */}
+      <ModernNavigation
+        onAddBook={handleAddBook}
+        onImport={() => setIsImportModalOpen(true)}
+      />
 
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-        {/* Stats */}
-        <StatsCards books={books} />
-
-        {/* Reading Streak */}
-        <ReadingStreak />
-
-        {/* Reading Speed */}
-        <ReadingSpeed />
-
-        {/* Analytics Dashboard */}
-        {books.length > 0 && <Analytics books={books} />}
-
-        {/* Collections Manager */}
-        <CollectionsManager />
+      {/* Main Content with proper spacing for sidebar on desktop and mobile nav */}
+      <div className="lg:ml-64 pt-16 lg:pt-0 pb-20 lg:pb-0">
+        <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
+          {/* Modern Dashboard with Stats and Currently Reading */}
+          <ModernDashboard
+            currentlyReading={currentlyReading}
+            stats={stats}
+          />
 
         {/* Advanced Search */}
         <AdvancedSearch
@@ -752,14 +563,11 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Books Display - Grid or Bookshelf View */}
+        {/* Books Display - Modern Grid or Bookshelf View */}
         {viewMode === 'grid' ? (
-          <BookGrid
+          <ModernBookGrid
             books={filteredBooks}
             onBookClick={handleViewBook}
-            onBookRightClick={handleBookRightClick}
-            selectedBookIds={selectedBookIds}
-            onBookSelect={toggleBookSelection}
           />
         ) : (
           <BookshelfView
@@ -768,6 +576,7 @@ export default function Home() {
             searchQuery={filters.searchQuery}
           />
         )}
+        </div>
       </div>
 
       {/* Modals */}
