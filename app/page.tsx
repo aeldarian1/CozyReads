@@ -525,6 +525,28 @@ export default function Home() {
                 }}
               />
               <button
+                onClick={() => window.location.href = '/statistics'}
+                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
+                style={{
+                  background: 'linear-gradient(135deg, #5d7052 0%, #6d8a96 100%)',
+                  color: '#fef3e2',
+                  boxShadow: '0 6px 20px rgba(93, 112, 82, 0.4)',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg">📊</span>
+                  <span className="hidden lg:inline">Statistics</span>
+                  <span className="hidden sm:inline lg:hidden">Stats</span>
+                  <span className="inline sm:hidden">📊</span>
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
+                  }}
+                />
+              </button>
+              <button
                 onClick={() => setIsImportModalOpen(true)}
                 className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
                 style={{
