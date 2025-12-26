@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     const skipDuplicates = formData.get('skipDuplicates') === 'true';
     const createCollections = formData.get('createCollections') === 'true';
     const enrichFromGoogle = formData.get('enrichFromGoogle') === 'true';
+    const fastMode = formData.get('fastMode') === 'true'; // Use fast Google Books enrichment
     const selectedIndicesStr = formData.get('selectedIndices') as string | null;
 
     if (!file) {
@@ -145,6 +146,7 @@ export async function POST(request: NextRequest) {
                 skipDuplicates,
                 createCollections,
                 enrichFromGoogle,
+                fastMode,
               });
 
               results.totalProcessed += singleResult.totalProcessed;

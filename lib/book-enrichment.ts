@@ -1,4 +1,5 @@
 import { normalizeGenre } from './genre-mapper';
+import { searchGoogleBooks } from './google-books';
 
 /**
  * Calculate similarity between two strings (0-1 range)
@@ -402,12 +403,19 @@ function isMatchingBook(
 /**
  * Enriches book data by fetching missing information from Hardcover API (primary) or multiple sources
  * Uses a smart merging strategy to get the best data from all sources
+ *
+ * @param isbn - Book ISBN (if available)
+ * @param title - Book title
+ * @param author - Book author
+ * @param hardcoverOnly - If true, only use Hardcover API (faster but less comprehensive)
+ * @param fastMode - If true, use optimized Google Books service for speed (recommended for bulk imports)
  */
 export async function enrichBookFromGoogleBooks(
   isbn: string | null,
   title: string,
   author: string,
-  hardcoverOnly: boolean = false
+  hardcoverOnly: boolean = false,
+  fastMode: boolean = false
 ): Promise<{
   coverUrl: string | null;
   genre: string | null;
@@ -424,6 +432,33 @@ export async function enrichBookFromGoogleBooks(
     publishedDate: null as string | null,
     pageCount: null as number | null,
   };
+
+  // Fast Mode: Use optimized Google Books service for bulk imports
+  if (fastMode) {
+    try {
+      const searchQuery = isbn || `${title} ${author}`;
+      const googleResults = await searchGoogleBooks(searchQuery, 3);
+
+      if (googleResults.length > 0) {
+        // Use first result (usually most relevant)
+        const book = googleResults[0];
+
+        result.coverUrl = book.coverUrl || null;
+        result.description = book.description || null;
+        result.genre = book.genre || null;
+        result.publisher = book.publisher || null;
+        result.publishedDate = book.publishedDate || null;
+        result.pageCount = book.totalPages || null;
+
+        console.log(`Fast mode: Enriched "${title}" from Google Books`);
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Fast mode enrichment failed:', error);
+      return result;
+    }
+  }
 
   try {
     // Try Hardcover first (fastest, best quality for modern books)
