@@ -27,6 +27,8 @@ export function AddBookModal({
     notes: '',
     currentPage: '',
     totalPages: '',
+    series: '',
+    seriesNumber: '',
   });
 
   const [apiSearch, setApiSearch] = useState('');
@@ -68,6 +70,8 @@ export function AddBookModal({
         notes: editingBook.notes || '',
         currentPage: editingBook.currentPage?.toString() || '',
         totalPages: editingBook.totalPages?.toString() || '',
+        series: editingBook.series || '',
+        seriesNumber: editingBook.seriesNumber?.toString() || '',
       });
       // Set selected collections from editing book
       setSelectedCollections(
@@ -92,6 +96,8 @@ export function AddBookModal({
         notes: '',
         currentPage: '',
         totalPages: '',
+        series: '',
+        seriesNumber: '',
       });
       setSelectedCollections([]);
       setApiResults([]);
@@ -148,6 +154,7 @@ export function AddBookModal({
       ...formData,
       currentPage: formData.currentPage ? parseInt(formData.currentPage) : null,
       totalPages: formData.totalPages ? parseInt(formData.totalPages) : null,
+      seriesNumber: formData.seriesNumber ? parseInt(formData.seriesNumber) : null,
     };
     onSave(dataToSave, selectedCollections);
   };
@@ -451,6 +458,43 @@ export function AddBookModal({
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-dark)'
                 }}
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold mb-2 tracking-wide uppercase text-xs" style={{ color: 'var(--text-dark)' }}>
+                📚 Series Name
+              </label>
+              <input
+                type="text"
+                value={formData.series}
+                onChange={(e) => setFormData({ ...formData, series: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-dark)'
+                }}
+                placeholder="e.g., Harry Potter, Lord of the Rings"
+              />
+            </div>
+
+            <div>
+              <label className="block font-bold mb-2 tracking-wide uppercase text-xs" style={{ color: 'var(--text-dark)' }}>
+                #️⃣ Book Number in Series
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={formData.seriesNumber}
+                onChange={(e) => setFormData({ ...formData, seriesNumber: e.target.value })}
+                className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-dark)'
+                }}
+                placeholder="1, 2, 3..."
               />
             </div>
           </div>

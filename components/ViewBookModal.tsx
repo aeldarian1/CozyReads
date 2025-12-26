@@ -90,6 +90,23 @@ export function ViewBookModal({
                   </div>
                 )}
 
+                {book.series && (
+                  <div>
+                    <label className="font-bold text-gray-700">📚 Series:</label>
+                    <p className="text-gray-600">
+                      {book.series}
+                      {book.seriesNumber && (
+                        <span className="ml-2 px-2 py-1 rounded-full text-xs font-bold" style={{
+                          background: 'linear-gradient(135deg, #8b6f47 0%, #a08968 100%)',
+                          color: '#fff',
+                        }}>
+                          Book #{book.seriesNumber}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <label className="font-bold text-gray-700">Status:</label>
                   <span

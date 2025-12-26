@@ -282,6 +282,27 @@ export function BookCard({
           </span>
         </div>
 
+        {/* Series Badge */}
+        {book.series && (
+          <div className="flex items-center gap-1 mb-2">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style={{
+              background: 'linear-gradient(135deg, #8b6f47 0%, #a08968 100%)',
+              color: '#fff',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)'
+            }}>
+              <span>📚</span>
+              <span>{book.series}</span>
+              {book.seriesNumber && (
+                <span className="px-1.5 py-0.5 rounded-full text-xs font-bold" style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                }}>
+                  #{book.seriesNumber}
+                </span>
+              )}
+            </span>
+          </div>
+        )}
+
         {/* Collection Badges */}
         {book.collections && book.collections.length > 0 && (
           <div className="flex items-center gap-1 mb-2 flex-wrap">

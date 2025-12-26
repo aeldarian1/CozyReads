@@ -64,6 +64,7 @@ model Book {
   @@index([title])
   @@index([author])
   @@index([readingStatus])
+  @@index([series])
 }
 
 model Collection {

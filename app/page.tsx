@@ -32,6 +32,8 @@ export type Book = {
   notes?: string | null;
   currentPage?: number | null;
   totalPages?: number | null;
+  series?: string | null;
+  seriesNumber?: number | null;
   dateAdded: string;
   dateFinished?: string | null;
   collections?: {
@@ -524,6 +526,27 @@ export default function Home() {
                   },
                 }}
               />
+              <button
+                onClick={() => window.location.href = '/series'}
+                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
+                style={{
+                  background: 'linear-gradient(135deg, #8b6f47 0%, #a08968 100%)',
+                  color: '#fef3e2',
+                  boxShadow: '0 6px 20px rgba(139, 111, 71, 0.4)',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg">📚</span>
+                  <span className="hidden lg:inline">Series</span>
+                  <span className="inline lg:hidden">📚</span>
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
+                  }}
+                />
+              </button>
               <button
                 onClick={() => window.location.href = '/statistics'}
                 className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"

@@ -110,6 +110,8 @@ export async function POST(request: NextRequest) {
       rating,
       review,
       notes,
+      series,
+      seriesNumber,
     } = body;
 
     if (!title || !author) {
@@ -132,6 +134,8 @@ export async function POST(request: NextRequest) {
         rating: rating || 0,
         review: review || null,
         notes: notes || null,
+        series: series || null,
+        seriesNumber: seriesNumber || null,
       },
     });
 
