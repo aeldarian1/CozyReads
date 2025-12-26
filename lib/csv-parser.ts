@@ -79,7 +79,7 @@ export async function parseGoodreadsCSV(
 
         resolve({ books, errors });
       },
-      error: (error) => {
+      error: (error: Error) => {
         errors.push(`CSV parsing error: ${error.message}`);
         resolve({ books, errors });
       },
