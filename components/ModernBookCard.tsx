@@ -45,16 +45,23 @@ export const ModernBookCard = memo(function ModernBookCard({ book, onClick, onUp
 
   return (
     <div
-      className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer"
+      className="flip-card group relative rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer"
       style={{
-        background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-color)',
-        transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+        height: '100%',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick}
     >
+      <div className="flip-card-inner" style={{ height: '100%' }}>
+        {/* FRONT OF CARD */}
+        <div
+          className="flip-card-front overflow-hidden"
+          style={{
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border-color)',
+          }}
+          onClick={onClick}
+        >
       {/* Book Cover */}
       <div className="relative aspect-[2/3] overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
         {book.coverUrl ? (
@@ -171,40 +178,70 @@ export const ModernBookCard = memo(function ModernBookCard({ book, onClick, onUp
         )}
       </div>
 
-      {/* Quick Actions on Hover */}
-      <div
-        className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 p-4"
-        onClick={(e) => {
-          // Allow clicks on the overlay to open details
-          if (e.target === e.currentTarget) {
-            onClick?.();
-          }
-        }}
-      >
-        <div className="w-full" onClick={(e) => e.stopPropagation()}>
-          <QuickActions
-            bookId={book.id}
-            currentStatus={book.readingStatus}
-            currentRating={book.rating}
-            onStatusChange={handleStatusChange}
-            onRatingChange={handleRatingChange}
-            onAddToCollection={handleAddToCollection}
-          />
-
-          {/* View Details Button */}
-          <button
-            className="w-full mt-2 px-4 py-2 rounded-lg font-bold text-white transition-all hover:scale-105"
-            style={{
-              background: 'linear-gradient(135deg, var(--warm-brown), var(--gold))',
-            }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick?.();
-            }}
-          >
-            View Full Details
-          </button>
         </div>
+        {/* END FRONT OF CARD */}
+
+        {/* BACK OF CARD */}
+        <div
+          className="flip-card-back p-4 flex flex-col overflow-y-auto"
+          style={{
+            background: 'linear-gradient(145deg, var(--bg-secondary), var(--bg-tertiary))',
+            border: '1px solid var(--border-color)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3
+            className="font-bold text-lg mb-2"
+            style={{ color: 'var(--text-dark)', fontFamily: 'Playfair Display, serif' }}
+          >
+            {book.title}
+          </h3>
+          <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>
+            by {book.author}
+          </p>
+
+          {/* Description */}
+          {book.description ? (
+            <div className="flex-1 mb-4">
+              <p className="text-xs leading-relaxed line-clamp-6" style={{ color: 'var(--text-dark)' }}>
+                {book.description}
+              </p>
+            </div>
+          ) : (
+            <div className="flex-1 mb-4 flex items-center justify-center">
+              <p className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
+                No description available
+              </p>
+            </div>
+          )}
+
+          {/* Quick Actions on Back */}
+          <div className="mt-auto">
+            <QuickActions
+              bookId={book.id}
+              currentStatus={book.readingStatus}
+              currentRating={book.rating}
+              onStatusChange={handleStatusChange}
+              onRatingChange={handleRatingChange}
+              onAddToCollection={handleAddToCollection}
+            />
+
+            {/* View Details Button */}
+            <button
+              className="w-full mt-2 px-4 py-2 rounded-lg font-bold text-white transition-all hover:scale-105"
+              style={{
+                background: 'linear-gradient(135deg, var(--warm-brown), var(--gold))',
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClick?.();
+              }}
+            >
+              View Full Details
+            </button>
+          </div>
+        </div>
+        {/* END BACK OF CARD */}
       </div>
     </div>
   );
