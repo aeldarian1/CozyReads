@@ -39,9 +39,10 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
         width: `${width}px`,
         height: `${height}px`,
         transformStyle: 'preserve-3d',
-        transition: 'transform 0.2s ease-out',
+        transition: 'transform 0.15s ease-out',
         position: 'relative',
-        willChange: 'transform',
+        contain: 'layout style paint',
+        backfaceVisibility: 'hidden',
       }}
       title={`${book.title} by ${book.author}${book.rating > 0 ? ` • ${'★'.repeat(book.rating)}` : ''}`}
     >
@@ -56,13 +57,11 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
           border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.3)'}`,
           borderRadius: '3px 0 0 3px',
           boxShadow: isHighlighted
-            ? `0 0 20px rgba(212, 165, 116, 1),
-               inset -4px 0 8px rgba(0, 0, 0, 0.5),
-               inset 3px 0 4px rgba(255, 255, 255, 0.2),
-               4px 4px 12px rgba(0, 0, 0, 0.4)`
-            : `inset -4px 0 8px rgba(0, 0, 0, 0.5),
-               inset 3px 0 4px rgba(255, 255, 255, 0.2),
-               4px 4px 12px rgba(0, 0, 0, 0.3)`,
+            ? `0 0 15px rgba(212, 165, 116, 0.8),
+               inset -3px 0 6px rgba(0, 0, 0, 0.4),
+               3px 3px 8px rgba(0, 0, 0, 0.3)`
+            : `inset -3px 0 6px rgba(0, 0, 0, 0.4),
+               3px 3px 8px rgba(0, 0, 0, 0.25)`,
           position: 'absolute',
           transformStyle: 'preserve-3d',
         }}
@@ -188,40 +187,19 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
         />
       </div>
 
-      {/* 3D Page edges (right side of book) */}
+      {/* 3D Page edges (right side of book) - optimized */}
       <div
-        className="absolute top-0 bottom-0 right-0"
+        className="absolute top-0 bottom-0 right-0 pointer-events-none"
         style={{
-          width: '12px',
-          transform: 'rotateY(90deg) translateZ(-6px)',
+          width: '10px',
+          transform: 'rotateY(90deg) translateZ(-5px)',
           transformOrigin: 'left center',
-          background: `linear-gradient(to right,
-            #f5f0e8 0%,
-            #ede8dc 20%,
-            #e5dfd0 40%,
-            #ddd7c8 60%,
-            #d5cfc0 80%,
-            #cdc7b8 100%)`,
-          boxShadow: `
-            inset -2px 0 4px rgba(0, 0, 0, 0.3),
-            inset 2px 0 3px rgba(255, 255, 255, 0.2),
-            2px 0 6px rgba(0, 0, 0, 0.2)
-          `,
+          background: 'linear-gradient(to right, #ede8dc 0%, #d5cfc0 100%)',
+          boxShadow: 'inset -2px 0 3px rgba(0, 0, 0, 0.25), 1px 0 4px rgba(0, 0, 0, 0.15)',
           borderRadius: '0 2px 2px 0',
+          backfaceVisibility: 'hidden',
         }}
-      >
-        {/* Page lines effect */}
-        <div
-          className="absolute inset-0 opacity-60"
-          style={{
-            backgroundImage: `repeating-linear-gradient(to bottom,
-              transparent,
-              transparent 2px,
-              rgba(0, 0, 0, 0.03) 2px,
-              rgba(0, 0, 0, 0.03) 3px)`,
-          }}
-        />
-      </div>
+      />
     </div>
   );
 }

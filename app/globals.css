@@ -221,21 +221,30 @@ h1, h2, h3, h4, h5, h6 {
   will-change: transform;
 }
 
-/* 3D Book hover effect - optimized for performance */
+/* 3D Book hover effect - GPU accelerated for 60fps */
 .hover-3d-book {
-  transform: translateZ(0) rotateY(0) translateX(0);
-  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
 }
 
 .hover-3d-book:hover {
-  transform: translateZ(20px) rotateY(-8deg) translateX(-8px);
+  transform: translate3d(-8px, 0, 20px) rotateY(-8deg);
   z-index: 20;
 }
 
-/* Smooth transitions for modal opening/closing */
+/* Optimize all book spines */
+.book-3d-container {
+  -webkit-perspective: 1000px;
+  perspective: 1000px;
+  transform-style: preserve-3d;
+}
+
+/* Smooth transitions */
 @media (prefers-reduced-motion: no-preference) {
   .hover-3d-book {
-    transition: transform 0.2s ease-out;
+    transition: transform 0.15s ease-out;
   }
 }
 
@@ -245,7 +254,7 @@ h1, h2, h3, h4, h5, h6 {
     transition: none;
   }
   .hover-3d-book:hover {
-    transform: translateX(-4px);
+    transform: translate3d(-4px, 0, 0);
   }
 }
 
