@@ -143,9 +143,18 @@ export function ViewBookModal({
                 {book.review && (
                   <div>
                     <label className="font-bold text-gray-700">
-                      Personal Review:
+                      ⭐ Personal Review:
                     </label>
                     <p className="text-gray-600 mt-1">{book.review}</p>
+                  </div>
+                )}
+
+                {book.notes && (
+                  <div>
+                    <label className="font-bold text-gray-700">
+                      📝 Personal Notes:
+                    </label>
+                    <p className="text-gray-600 mt-1 whitespace-pre-wrap">{book.notes}</p>
                   </div>
                 )}
               </div>

@@ -29,6 +29,7 @@ export type Book = {
   readingStatus: string;
   rating: number;
   review?: string | null;
+  notes?: string | null;
   currentPage?: number | null;
   totalPages?: number | null;
   dateAdded: string;

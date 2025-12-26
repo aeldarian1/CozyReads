@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
       readingStatus,
       rating,
       review,
+      notes,
     } = body;
 
     if (!title || !author) {
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
         readingStatus: readingStatus || 'Want to Read',
         rating: rating || 0,
         review: review || null,
+        notes: notes || null,
       },
     });
 

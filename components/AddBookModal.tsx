@@ -24,6 +24,7 @@ export function AddBookModal({
     readingStatus: 'Want to Read',
     rating: 0,
     review: '',
+    notes: '',
     currentPage: '',
     totalPages: '',
   });
@@ -64,6 +65,7 @@ export function AddBookModal({
         readingStatus: editingBook.readingStatus,
         rating: editingBook.rating,
         review: editingBook.review || '',
+        notes: editingBook.notes || '',
         currentPage: editingBook.currentPage?.toString() || '',
         totalPages: editingBook.totalPages?.toString() || '',
       });
@@ -87,6 +89,7 @@ export function AddBookModal({
         readingStatus: 'Want to Read',
         rating: 0,
         review: '',
+        notes: '',
         currentPage: '',
         totalPages: '',
       });
@@ -629,9 +632,9 @@ export function AddBookModal({
             )}
           </div>
 
-          <div className="mb-6">
+          <div className="mb-4">
             <label className="block font-bold mb-2 tracking-wide uppercase text-xs" style={{ color: 'var(--text-dark)' }}>
-              📝 Personal Review/Notes
+              ⭐ Personal Review
             </label>
             <textarea
               rows={3}
@@ -643,7 +646,25 @@ export function AddBookModal({
                 background: 'var(--bg-secondary)',
                 color: 'var(--text-dark)'
               }}
-              placeholder="Your thoughts about this book..."
+              placeholder="Your overall opinion and review of this book..."
+            />
+          </div>
+
+          <div className="mb-6">
+            <label className="block font-bold mb-2 tracking-wide uppercase text-xs" style={{ color: 'var(--text-dark)' }}>
+              📝 Personal Notes
+            </label>
+            <textarea
+              rows={3}
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all resize-none"
+              style={{
+                borderColor: 'var(--border-color)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-dark)'
+              }}
+              placeholder="Personal thoughts, quotes, or highlights..."
             />
           </div>
 
