@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { ManualBookSelectionModal } from './ManualBookSelectionModal';
 
 interface ImportResult {
   totalProcessed: number;
@@ -9,6 +10,13 @@ interface ImportResult {
   failed: number;
   errors: Array<{ row: number; book: string; error: string }>;
   collectionsCreated: string[];
+  needsVerification: Array<{
+    bookId: string;
+    title: string;
+    author: string;
+    isbn: string;
+    reason: string;
+  }>;
 }
 
 interface ParsedBook {
@@ -46,6 +54,8 @@ export function ImportGoodreadsModal({
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string>('');
   const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set());
+  const [selectedBookForVerification, setSelectedBookForVerification] = useState<ImportResult['needsVerification'][0] | null>(null);
+  const [verifiedBooks, setVerifiedBooks] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -167,6 +177,39 @@ export function ImportGoodreadsModal({
     }
   };
 
+  const handleBookSelected = async (bookId: string, selectedData: any) => {
+    const volumeInfo = selectedData.volumeInfo;
+
+    // Extract data from Google Books result
+    const updateData = {
+      description: volumeInfo.description || undefined,
+      coverUrl: volumeInfo.imageLinks?.thumbnail?.replace('http://', 'https://') || undefined,
+      genre: volumeInfo.categories?.join(', ') || undefined,
+      publisher: volumeInfo.publisher || undefined,
+      publishedDate: volumeInfo.publishedDate || undefined,
+      totalPages: volumeInfo.pageCount || undefined,
+    };
+
+    // Remove undefined values
+    const cleanData = Object.fromEntries(
+      Object.entries(updateData).filter(([_, v]) => v !== undefined)
+    );
+
+    // Call the update API
+    const response = await fetch(`/api/books/${bookId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(cleanData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update book');
+    }
+
+    // Mark as verified
+    setVerifiedBooks(prev => new Set([...prev, bookId]));
+  };
+
   const resetModal = () => {
     setSelectedFile(null);
     setParsedBooks([]);
@@ -176,6 +219,8 @@ export function ImportGoodreadsModal({
     setCurrentStep('upload');
     setProgress({ current: 0, total: 0, currentBook: '' });
     setExpandedErrors(new Set());
+    setSelectedBookForVerification(null);
+    setVerifiedBooks(new Set());
     setSkipDuplicates(true);
     setCreateCollections(true);
     setEnrichFromGoogle(true);
@@ -577,6 +622,68 @@ export function ImportGoodreadsModal({
                 )}
               </div>
 
+              {/* Books Needing Manual Verification */}
+              {importResult.needsVerification && importResult.needsVerification.length > 0 && (
+                <div className="p-6 rounded-xl" style={{
+                  background: 'var(--gradient-card)',
+                  border: '2px solid rgba(234, 179, 8, 0.5)',
+                }}>
+                  <h3 className="text-lg font-bold mb-3 flex items-center gap-2" style={{ color: 'var(--text-dark)' }}>
+                    <span>🔍</span>
+                    {importResult.needsVerification.length - verifiedBooks.size} Book{importResult.needsVerification.length - verifiedBooks.size !== 1 ? 's' : ''} Need Manual Verification
+                  </h3>
+                  <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>
+                    These books were imported but are missing some information. Click to search and select the correct book.
+                  </p>
+
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {importResult.needsVerification.map((book, idx) => (
+                      <div
+                        key={idx}
+                        className={`p-3 rounded-lg border-2 transition-all ${
+                          verifiedBooks.has(book.bookId) ? 'opacity-50' : 'hover:border-[var(--warm-brown)] cursor-pointer'
+                        }`}
+                        style={{
+                          background: verifiedBooks.has(book.bookId) ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg-secondary)',
+                          borderColor: verifiedBooks.has(book.bookId) ? '#15803d' : 'var(--border-color)',
+                        }}
+                        onClick={() => !verifiedBooks.has(book.bookId) && setSelectedBookForVerification(book)}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <p className="font-semibold mb-1" style={{ color: 'var(--text-dark)' }}>
+                              {book.title}
+                            </p>
+                            <p className="text-sm mb-1" style={{ color: 'var(--text-muted)' }}>
+                              by {book.author}
+                            </p>
+                            <p className="text-xs" style={{ color: '#d97706' }}>
+                              {book.reason}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0">
+                            {verifiedBooks.has(book.bookId) ? (
+                              <span className="text-2xl">✓</span>
+                            ) : (
+                              <button
+                                onClick={() => setSelectedBookForVerification(book)}
+                                className="px-3 py-1 rounded-lg text-xs font-semibold hover:scale-105 transition-transform"
+                                style={{
+                                  background: 'var(--warm-brown)',
+                                  color: '#ffffff',
+                                }}
+                              >
+                                Fix
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Grouped Error Details */}
               {Object.keys(groupedErrors).length > 0 && (
                 <div className="space-y-3">
@@ -679,6 +786,16 @@ export function ImportGoodreadsModal({
           </div>
         </div>
       </div>
+
+      {/* Manual Book Selection Modal */}
+      {selectedBookForVerification && (
+        <ManualBookSelectionModal
+          isOpen={!!selectedBookForVerification}
+          onClose={() => setSelectedBookForVerification(null)}
+          book={selectedBookForVerification}
+          onBookSelected={handleBookSelected}
+        />
+      )}
     </div>
   );
 }

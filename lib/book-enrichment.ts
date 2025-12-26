@@ -76,7 +76,7 @@ async function fetchFromGoogleBooks(isbn: string | null, title: string, author: 
 
   try {
     // Normalize and clean ISBN (support both ISBN-10 and ISBN-13)
-    const cleanISBN = isbn ? isbn.replace(/[-\s]/g, '') : null;
+    const cleanISBN = isbn ? isbn.replace(/[-\s='"]/g, '') : null;
 
     // Try multiple search strategies for better accuracy
     const searchStrategies = [];
@@ -84,17 +84,32 @@ async function fetchFromGoogleBooks(isbn: string | null, title: string, author: 
     if (cleanISBN) {
       // Strategy 1: ISBN search (most accurate)
       searchStrategies.push(`isbn:${cleanISBN}`);
+
+      // Strategy 1b: Try ISBN variants (10 vs 13)
+      const isbnVariants = getISBNVariants(cleanISBN);
+      isbnVariants.forEach(variant => {
+        if (variant !== cleanISBN) {
+          searchStrategies.push(`isbn:${variant}`);
+        }
+      });
     }
 
-    // Strategy 2: Combined title and author search
+    // Strategy 2: Combined title and author search (exact match)
     const cleanTitle = title.trim();
     const cleanAuthor = author.trim();
     searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:"${cleanAuthor}"`);
 
-    // Strategy 3: Fallback without quotes
-    if (searchStrategies.length === 1) {
-      searchStrategies.push(`intitle:${cleanTitle}+inauthor:${cleanAuthor}`);
+    // Strategy 3: Title only with partial author (helps with middle names/initials)
+    const authorLastName = cleanAuthor.split(' ').pop();
+    if (authorLastName && authorLastName.length > 2) {
+      searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:${authorLastName}`);
     }
+
+    // Strategy 4: Fallback without quotes (broader search)
+    searchStrategies.push(`intitle:${cleanTitle}+inauthor:${cleanAuthor}`);
+
+    // Strategy 5: Just title if all else fails
+    searchStrategies.push(`intitle:"${cleanTitle}"`);
 
     // Try each strategy until we get results
     for (const searchQuery of searchStrategies) {
@@ -193,7 +208,8 @@ async function fetchFromOpenLibrary(isbn: string | null, title: string, author: 
     if (cleanISBN) {
       try {
         // Try both ISBN-13 and ISBN-10 formats
-        for (const isbnVariant of [cleanISBN]) {
+        const isbnVariants = getISBNVariants(cleanISBN);
+        for (const isbnVariant of isbnVariants) {
           const response = await fetchWithRetry(`https://openlibrary.org/isbn/${isbnVariant}.json`);
           if (response.ok) {
             const data = await response.json();
@@ -324,14 +340,59 @@ async function fetchFromOpenLibrary(isbn: string | null, title: string, author: 
   return result;
 }
 
-// Helper function to retry failed fetch requests
-async function fetchWithRetry(url: string, retries = 2, delay = 1000): Promise<Response> {
+// Helper function to convert between ISBN-10 and ISBN-13
+function getISBNVariants(isbn: string): string[] {
+  const variants = [isbn];
+
+  // Remove any remaining non-digit characters
+  const digits = isbn.replace(/\D/g, '');
+
+  if (digits.length === 10) {
+    // Convert ISBN-10 to ISBN-13
+    const isbn13 = '978' + digits.substring(0, 9);
+    const checksum = calculateISBN13Checksum(isbn13);
+    variants.push(isbn13 + checksum);
+  } else if (digits.length === 13 && digits.startsWith('978')) {
+    // Convert ISBN-13 to ISBN-10
+    const isbn10Base = digits.substring(3, 12);
+    const checksum = calculateISBN10Checksum(isbn10Base);
+    if (checksum !== 'X' && checksum !== '') {
+      variants.push(isbn10Base + checksum);
+    }
+  }
+
+  return variants;
+}
+
+function calculateISBN13Checksum(isbn12: string): string {
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    const digit = parseInt(isbn12[i]);
+    sum += digit * (i % 2 === 0 ? 1 : 3);
+  }
+  const checksum = (10 - (sum % 10)) % 10;
+  return checksum.toString();
+}
+
+function calculateISBN10Checksum(isbn9: string): string {
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(isbn9[i]) * (10 - i);
+  }
+  const checksum = (11 - (sum % 11)) % 11;
+  return checksum === 10 ? 'X' : checksum.toString();
+}
+
+// Helper function to retry failed fetch requests with improved backoff
+async function fetchWithRetry(url: string, retries = 3, delay = 800): Promise<Response> {
   for (let i = 0; i <= retries; i++) {
     try {
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'CozyReads/1.0 (Book enrichment service)',
         },
+        // Add timeout
+        signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
       // If successful or client error (4xx), return immediately
@@ -339,17 +400,19 @@ async function fetchWithRetry(url: string, retries = 2, delay = 1000): Promise<R
         return response;
       }
 
-      // Server error (5xx) - retry
+      // Server error (5xx) - retry with exponential backoff
       if (i < retries) {
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        const backoffDelay = delay * Math.pow(1.5, i);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
         continue;
       }
 
       return response;
     } catch (error) {
-      // Network error - retry
+      // Network error or timeout - retry with exponential backoff
       if (i < retries) {
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        const backoffDelay = delay * Math.pow(1.5, i);
+        await new Promise(resolve => setTimeout(resolve, backoffDelay));
         continue;
       }
       throw error;

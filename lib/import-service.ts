@@ -9,6 +9,13 @@ export interface ImportResult {
   failed: number;
   errors: Array<{ row: number; book: string; error: string }>;
   collectionsCreated: string[];
+  needsVerification: Array<{
+    bookId: string;
+    title: string;
+    author: string;
+    isbn: string;
+    reason: string;
+  }>;
 }
 
 export async function importGoodreadsBooks(
@@ -27,6 +34,7 @@ export async function importGoodreadsBooks(
     failed: 0,
     errors: [],
     collectionsCreated: [],
+    needsVerification: [],
   };
 
   // Get all existing books for duplicate detection
@@ -109,23 +117,13 @@ export async function importGoodreadsBooks(
           }
 
           // Validate required fields before import
-          // Skip books missing: ISBN, rating (>0)
+          // Skip books missing ISBN
           if (!book.isbn || book.isbn.trim() === '') {
             result.skipped++;
             result.errors.push({
               row: rowNumber,
               book: book.title,
               error: 'Missing required field: ISBN',
-            });
-            return;
-          }
-
-          if (book.rating === 0) {
-            result.skipped++;
-            result.errors.push({
-              row: rowNumber,
-              book: book.title,
-              error: 'Missing required field: Rating',
             });
             return;
           }
@@ -157,17 +155,19 @@ export async function importGoodreadsBooks(
             }
           }
 
-          // Final validation: Check if description is available after enrichment
+          // Check if description is available after enrichment
           const finalDescription = enrichedData.description || book.review;
-          if (!finalDescription || finalDescription.trim() === '') {
-            result.skipped++;
-            result.errors.push({
-              row: rowNumber,
-              book: book.title,
-              error: 'Missing required field: Description (no review or enriched description available)',
-            });
-            return;
-          }
+          const missingDescription = !finalDescription || finalDescription.trim() === '';
+          const missingCover = !enrichedData.coverUrl;
+
+          // Track what information is missing for potential manual verification
+          const verificationReasons = [];
+          if (missingDescription) verificationReasons.push('description');
+          if (missingCover) verificationReasons.push('cover');
+
+          // Use fallback values if missing (import anyway, let user fix later)
+          const descriptionToUse = finalDescription || 'No description available. Please update manually.';
+          const needsManualVerification = verificationReasons.length > 0;
 
           // Use enriched page count if available and more reliable than Goodreads data
           const finalTotalPages = enrichedData.pageCount || book.totalPages;
@@ -189,18 +189,18 @@ export async function importGoodreadsBooks(
           }
 
           // Use transaction to ensure atomicity
-          await prisma.$transaction(async (tx) => {
+          const createdBook = await prisma.$transaction(async (tx) => {
             // Create book
-            const createdBook = await tx.book.create({
+            const newBook = await tx.book.create({
               data: {
                 userId,
                 title: book.title,
                 author: book.author,
                 isbn: book.isbn,
                 genre: enrichedData.genre || book.genre,
-                description: finalDescription,
+                description: descriptionToUse,
                 coverUrl: enrichedData.coverUrl,
-                rating: book.rating,
+                rating: book.rating || 0,
                 review: book.review,
                 readingStatus: book.readingStatus,
                 totalPages: finalTotalPages,
@@ -218,7 +218,7 @@ export async function importGoodreadsBooks(
               const collectionLinks = book.shelves
                 .filter(shelf => collectionMap.has(shelf))
                 .map(shelf => ({
-                  bookId: createdBook.id,
+                  bookId: newBook.id,
                   collectionId: collectionMap.get(shelf)!,
                 }));
 
@@ -229,9 +229,22 @@ export async function importGoodreadsBooks(
                 });
               }
             }
+
+            return newBook;
           });
 
           result.imported++;
+
+          // Add to verification list if enrichment was incomplete
+          if (needsManualVerification) {
+            result.needsVerification.push({
+              bookId: createdBook.id,
+              title: book.title,
+              author: book.author,
+              isbn: book.isbn,
+              reason: `Missing ${verificationReasons.join(' and ')}`,
+            });
+          }
         } catch (error) {
           result.failed++;
           result.errors.push({
