@@ -1,0 +1,62 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Book {
+  id            String   @id @default(uuid())
+  title         String
+  author        String
+  isbn          String?
+  genre         String?
+  description   String?
+  coverUrl      String?
+  readingStatus String   @default("Want to Read") // "Want to Read" | "Currently Reading" | "Finished"
+  rating        Int      @default(0)
+  review        String?
+  currentPage   Int?
+  totalPages    Int?
+  dateAdded     DateTime @default(now())
+  dateFinished  DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  collections   BookCollection[]
+
+  @@index([title])
+  @@index([author])
+  @@index([readingStatus])
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  color       String   @default("#8b6f47") // Hex color for the collection
+  icon        String   @default("📚") // Emoji icon
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  books       BookCollection[]
+}
+
+model BookCollection {
+  id           String     @id @default(uuid())
+  bookId       String
+  collectionId String
+  addedAt      DateTime   @default(now())
+
+  book         Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, collectionId])
+  @@index([bookId])
+  @@index([collectionId])
+}
