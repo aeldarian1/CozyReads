@@ -72,14 +72,22 @@ export function VirtualizedBookGrid({ books, onBookClick, onBookUpdate, onAddToC
           justifyContent: 'center',
         }}
       >
-        {books.map((book) => (
-          <ModernBookCard
+        {books.map((book, index) => (
+          <div
             key={book.id}
-            book={book}
-            onClick={() => onBookClick(book)}
-            onUpdate={(updates) => onBookUpdate?.(book.id, updates)}
-            onAddToCollection={onAddToCollection}
-          />
+            style={{
+              animation: 'scaleIn 0.4s ease-out forwards',
+              animationDelay: `${Math.min(index * 0.05, 2)}s`,
+              opacity: 0,
+            }}
+          >
+            <ModernBookCard
+              book={book}
+              onClick={() => onBookClick(book)}
+              onUpdate={(updates) => onBookUpdate?.(book.id, updates)}
+              onAddToCollection={onAddToCollection}
+            />
+          </div>
         ))}
       </div>
     </div>
