@@ -481,12 +481,10 @@ export default function Home() {
             setQuickEditMenu(null);
             handleEditBook(book);
           }}
-          onDelete={(bookId) => {
-            handleDeleteBook(bookId);
+          onDelete={() => {
+            handleDeleteBook(quickEditMenu.book.id);
           }}
-          onQuickUpdate={(updates) => {
-            handleQuickUpdate(quickEditMenu.book.id, updates);
-          }}
+          onQuickUpdate={(updates) => handleQuickUpdate(quickEditMenu.book.id, updates)}
         />
       )}
     </div>
