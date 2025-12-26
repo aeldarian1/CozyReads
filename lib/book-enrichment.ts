@@ -165,27 +165,75 @@ function findBestMatch(items: any[], targetTitle: string, targetAuthor: string):
   if (!items || items.length === 0) return items[0];
   if (items.length === 1) return items[0];
 
-  // Normalize strings for comparison
-  const normalize = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').trim();
-  const normalizedTitle = normalize(targetTitle);
+  // Normalize strings for comparison - more aggressive normalization
+  const normalize = (str: string) => {
+    return str
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')  // Replace punctuation with spaces
+      .replace(/\s+/g, ' ')       // Collapse multiple spaces
+      .trim();
+  };
+
+  // Remove common subtitle patterns and extra info
+  const cleanTitle = (title: string) => {
+    let cleaned = normalize(title);
+    // Remove common patterns like "book 1", "volume 1", "a novel", etc.
+    cleaned = cleaned.replace(/\b(book|vol|volume|part|a novel|the novel)\s*\d*\b/gi, '');
+    // Remove parenthetical information
+    cleaned = cleaned.replace(/\([^)]*\)/g, '');
+    return cleaned.trim();
+  };
+
+  const normalizedTitle = cleanTitle(targetTitle);
   const normalizedAuthor = normalize(targetAuthor);
+
+  // Split into words for token-based matching
+  const titleWords = new Set(normalizedTitle.split(' ').filter(w => w.length > 2));
+  const authorWords = new Set(normalizedAuthor.split(' ').filter(w => w.length > 1));
 
   // Score each item
   const scored = items.map(item => {
-    const itemTitle = normalize(item.title || item.volumeInfo?.title || '');
+    const itemTitle = cleanTitle(item.title || item.volumeInfo?.title || '');
     const itemAuthor = normalize(
       item.author_name?.[0] ||
       item.volumeInfo?.authors?.[0] ||
       ''
     );
 
-    // Calculate similarity scores (simple substring matching)
-    const titleMatch = itemTitle.includes(normalizedTitle) || normalizedTitle.includes(itemTitle);
-    const authorMatch = itemAuthor.includes(normalizedAuthor) || normalizedAuthor.includes(itemAuthor);
+    const itemTitleWords = new Set(itemTitle.split(' ').filter(w => w.length > 2));
+    const itemAuthorWords = new Set(itemAuthor.split(' ').filter(w => w.length > 1));
 
     let score = 0;
-    if (titleMatch) score += 2;
-    if (authorMatch) score += 1;
+
+    // Exact substring match (highest score)
+    if (itemTitle.includes(normalizedTitle) || normalizedTitle.includes(itemTitle)) {
+      score += 5;
+    }
+
+    // Calculate word overlap for title (flexible matching)
+    const titleOverlap = [...titleWords].filter(word => itemTitleWords.has(word)).length;
+    const titleTotal = Math.max(titleWords.size, itemTitleWords.size);
+    if (titleTotal > 0) {
+      score += (titleOverlap / titleTotal) * 4;  // Up to 4 points for title similarity
+    }
+
+    // Author matching
+    if (itemAuthor.includes(normalizedAuthor) || normalizedAuthor.includes(itemAuthor)) {
+      score += 3;
+    } else {
+      // Check author word overlap
+      const authorOverlap = [...authorWords].filter(word => itemAuthorWords.has(word)).length;
+      if (authorOverlap > 0) {
+        score += (authorOverlap / authorWords.size) * 2;
+      }
+    }
+
+    // Bonus for first word match (often the main title)
+    const firstWordTarget = normalizedTitle.split(' ')[0];
+    const firstWordItem = itemTitle.split(' ')[0];
+    if (firstWordTarget === firstWordItem && firstWordTarget.length > 3) {
+      score += 1;
+    }
 
     return { item, score };
   });
