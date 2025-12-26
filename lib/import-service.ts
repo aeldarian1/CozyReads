@@ -13,7 +13,7 @@ export interface ImportResult {
     bookId: string;
     title: string;
     author: string;
-    isbn: string;
+    isbn: string | null;
     reason: string;
   }>;
 }
@@ -116,17 +116,7 @@ export async function importGoodreadsBooks(
             return;
           }
 
-          // Validate required fields before import
-          // Skip books missing ISBN
-          if (!book.isbn || book.isbn.trim() === '') {
-            result.skipped++;
-            result.errors.push({
-              row: rowNumber,
-              book: book.title,
-              error: 'Missing required field: ISBN',
-            });
-            return;
-          }
+          // ISBN is optional - enrichment will try to find data using title + author if missing
 
           // Enrich book data from Google Books if enabled
           let enrichedData: {
@@ -196,7 +186,7 @@ export async function importGoodreadsBooks(
                 userId,
                 title: book.title,
                 author: book.author,
-                isbn: book.isbn,
+                isbn: book.isbn || null,
                 genre: enrichedData.genre || book.genre,
                 description: descriptionToUse,
                 coverUrl: enrichedData.coverUrl,

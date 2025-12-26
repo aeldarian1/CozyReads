@@ -20,29 +20,29 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
   };
 
   try {
-    // Fetch from both sources in parallel for better performance
-    const [googleResult, openLibraryResult] = await Promise.allSettled([
+    // Fetch from all sources in parallel for better performance
+    const [googleResult, openLibraryResult, worldCatResult] = await Promise.allSettled([
       fetchFromGoogleBooks(isbn, title, author),
-      fetchFromOpenLibrary(isbn, title, author)
+      fetchFromOpenLibrary(isbn, title, author),
+      fetchFromWorldCat(isbn, title, author)
     ]);
 
-    // Merge results, preferring Google Books for most fields but OpenLibrary for covers
+    // Merge results, preferring Google Books for most fields
     const google = googleResult.status === 'fulfilled' ? googleResult.value : null;
     const openLib = openLibraryResult.status === 'fulfilled' ? openLibraryResult.value : null;
+    const worldCat = worldCatResult.status === 'fulfilled' ? worldCatResult.value : null;
 
-    // Cover URL: Prefer high-quality Google Books covers, fallback to OpenLibrary
-    result.coverUrl = google?.coverUrl || openLib?.coverUrl || null;
+    // Cover URL: Prefer high-quality covers from any source
+    result.coverUrl = google?.coverUrl || openLib?.coverUrl || worldCat?.coverUrl || null;
 
     // Description: Prefer longer, more detailed descriptions
     const googleDesc = google?.description || '';
     const openLibDesc = openLib?.description || '';
-    if (googleDesc.length > openLibDesc.length) {
-      result.description = googleDesc || null;
-    } else {
-      result.description = openLibDesc || googleDesc || null;
-    }
+    const worldCatDesc = worldCat?.description || '';
+    const descriptions = [googleDesc, openLibDesc, worldCatDesc].sort((a, b) => b.length - a.length);
+    result.description = descriptions[0] || null;
 
-    // Genre: Combine unique genres from both sources
+    // Genre: Combine unique genres from all sources
     const genres = new Set<string>();
     if (google?.genre) {
       google.genre.split(',').forEach(g => genres.add(g.trim()));
@@ -50,12 +50,15 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
     if (openLib?.genre) {
       openLib.genre.split(',').forEach(g => genres.add(g.trim()));
     }
+    if (worldCat?.genre) {
+      worldCat.genre.split(',').forEach(g => genres.add(g.trim()));
+    }
     result.genre = genres.size > 0 ? Array.from(genres).slice(0, 3).join(', ') : null;
 
-    // Additional metadata from Google Books (usually more reliable for these fields)
-    result.publisher = google?.publisher || openLib?.publisher || null;
-    result.publishedDate = google?.publishedDate || openLib?.publishedDate || null;
-    result.pageCount = google?.pageCount || openLib?.pageCount || null;
+    // Additional metadata - prefer Google Books, fallback to others
+    result.publisher = google?.publisher || worldCat?.publisher || openLib?.publisher || null;
+    result.publishedDate = google?.publishedDate || worldCat?.publishedDate || openLib?.publishedDate || null;
+    result.pageCount = google?.pageCount || worldCat?.pageCount || openLib?.pageCount || null;
 
   } catch (error) {
     console.error('Error enriching book data:', error);
@@ -105,10 +108,28 @@ async function fetchFromGoogleBooks(isbn: string | null, title: string, author: 
       searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:${authorLastName}`);
     }
 
-    // Strategy 4: Fallback without quotes (broader search)
+    // Strategy 4: Remove subtitle from title (before colon or dash)
+    const mainTitle = cleanTitle.split(':')[0].split('-')[0].trim();
+    if (mainTitle !== cleanTitle && mainTitle.length > 3) {
+      searchStrategies.push(`intitle:"${mainTitle}"+inauthor:"${cleanAuthor}"`);
+    }
+
+    // Strategy 5: Remove series info (anything in parentheses)
+    const titleWithoutSeries = cleanTitle.replace(/\([^)]*\)/g, '').trim();
+    if (titleWithoutSeries !== cleanTitle && titleWithoutSeries.length > 3) {
+      searchStrategies.push(`intitle:"${titleWithoutSeries}"+inauthor:"${cleanAuthor}"`);
+    }
+
+    // Strategy 6: First significant word of title + full author
+    const firstWords = cleanTitle.split(' ').slice(0, 3).join(' ');
+    if (firstWords.length > 5) {
+      searchStrategies.push(`intitle:${firstWords}+inauthor:"${cleanAuthor}"`);
+    }
+
+    // Strategy 7: Fallback without quotes (broader search)
     searchStrategies.push(`intitle:${cleanTitle}+inauthor:${cleanAuthor}`);
 
-    // Strategy 5: Just title if all else fails
+    // Strategy 8: Just title if all else fails
     searchStrategies.push(`intitle:"${cleanTitle}"`);
 
     // Try each strategy until we get results
@@ -276,65 +297,180 @@ async function fetchFromOpenLibrary(isbn: string | null, title: string, author: 
       }
     }
 
-    // Fallback to title/author search
-    const searchResponse = await fetchWithRetry(
-      `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&limit=5`
-    );
+    // Fallback to title/author search with multiple strategies
+    const searchStrategies = [
+      // Strategy 1: Exact title and author
+      { title, author },
+      // Strategy 2: Remove subtitle (before colon)
+      { title: title.split(':')[0].trim(), author },
+      // Strategy 3: Remove series info (parentheses)
+      { title: title.replace(/\([^)]*\)/g, '').trim(), author },
+      // Strategy 4: Author last name only
+      { title, author: author.split(' ').pop() || author },
+    ];
 
-    if (!searchResponse.ok) return result;
+    for (const { title: searchTitle, author: searchAuthor } of searchStrategies) {
+      if (!searchTitle || searchTitle.length < 3) continue;
 
-    const searchData = await searchResponse.json();
-
-    if (!searchData.docs || searchData.docs.length === 0) return result;
-
-    const book = findBestMatch(searchData.docs, title, author);
-
-    // Get cover image (high quality)
-    if (book.cover_i) {
-      result.coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
-    } else if (book.isbn && book.isbn[0]) {
-      result.coverUrl = `https://covers.openlibrary.org/b/isbn/${book.isbn[0]}-L.jpg`;
-    }
-
-    // Get genres from subjects
-    if (book.subject && book.subject.length > 0) {
-      result.genre = book.subject.slice(0, 3).join(', ');
-    }
-
-    // Get publisher
-    if (book.publisher && book.publisher.length > 0) {
-      result.publisher = book.publisher[0];
-    }
-
-    // Get publish date
-    if (book.first_publish_year) {
-      result.publishedDate = book.first_publish_year.toString();
-    }
-
-    // Get page count
-    if (book.number_of_pages_median && book.number_of_pages_median > 0) {
-      result.pageCount = book.number_of_pages_median;
-    }
-
-    // Fetch description from work if available
-    if (book.key) {
       try {
-        const workResponse = await fetchWithRetry(`https://openlibrary.org${book.key}.json`);
-        if (workResponse.ok) {
-          const workData = await workResponse.json();
-          if (workData.description) {
-            result.description = typeof workData.description === 'string'
-              ? workData.description
-              : workData.description.value;
+        const searchResponse = await fetchWithRetry(
+          `https://openlibrary.org/search.json?title=${encodeURIComponent(searchTitle)}&author=${encodeURIComponent(searchAuthor)}&limit=10`
+        );
+
+        if (!searchResponse.ok) continue;
+
+        const searchData = await searchResponse.json();
+
+        if (!searchData.docs || searchData.docs.length === 0) continue;
+
+        const book = findBestMatch(searchData.docs, title, author);
+
+        // Get cover image (high quality)
+        if (book.cover_i) {
+          result.coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+        } else if (book.isbn && book.isbn[0]) {
+          result.coverUrl = `https://covers.openlibrary.org/b/isbn/${book.isbn[0]}-L.jpg`;
+        }
+
+        // Get genres from subjects
+        if (book.subject && book.subject.length > 0) {
+          result.genre = book.subject.slice(0, 3).join(', ');
+        }
+
+        // Get publisher
+        if (book.publisher && book.publisher.length > 0) {
+          result.publisher = book.publisher[0];
+        }
+
+        // Get publish date
+        if (book.first_publish_year) {
+          result.publishedDate = book.first_publish_year.toString();
+        }
+
+        // Get page count
+        if (book.number_of_pages_median && book.number_of_pages_median > 0) {
+          result.pageCount = book.number_of_pages_median;
+        }
+
+        // Fetch description from work if available
+        if (book.key) {
+          try {
+            const workResponse = await fetchWithRetry(`https://openlibrary.org${book.key}.json`);
+            if (workResponse.ok) {
+              const workData = await workResponse.json();
+              if (workData.description) {
+                result.description = typeof workData.description === 'string'
+                  ? workData.description
+                  : workData.description.value;
+              }
+            }
+          } catch (error) {
+            // Description fetch failed, continue without it
           }
         }
+
+        // If we found good data, break out of search strategies loop
+        if (result.coverUrl || result.description) {
+          break;
+        }
       } catch (error) {
-        // Description fetch failed, continue without it
+        // This strategy failed, try next one
+        continue;
       }
     }
 
   } catch (error) {
     console.error('Error fetching from Open Library:', error);
+  }
+
+  return result;
+}
+
+async function fetchFromWorldCat(isbn: string | null, title: string, author: string) {
+  const result = {
+    coverUrl: null as string | null,
+    genre: null as string | null,
+    description: null as string | null,
+    publisher: null as string | null,
+    publishedDate: null as string | null,
+    pageCount: null as number | null,
+  };
+
+  try {
+    // WorldCat Search API endpoint
+    const searchStrategies = [];
+
+    // Try ISBN first if available
+    if (isbn) {
+      const cleanISBN = isbn.replace(/[-\s]/g, '');
+      searchStrategies.push(`srw.isbn="${cleanISBN}"`);
+    }
+
+    // Try title + author
+    const cleanTitle = title.trim().replace(/[:"]/g, '');
+    const cleanAuthor = author.trim();
+    searchStrategies.push(`srw.ti="${cleanTitle}" and srw.au="${cleanAuthor}"`);
+
+    // Try just title if author fails
+    searchStrategies.push(`srw.ti="${cleanTitle}"`);
+
+    for (const query of searchStrategies) {
+      try {
+        // WorldCat SRU API (free, no key required)
+        const response = await fetchWithRetry(
+          `http://www.worldcat.org/webservices/catalog/search/sru?query=${encodeURIComponent(query)}&maximumRecords=5&recordSchema=info:srw/schema/1/dc`
+        );
+
+        if (!response.ok) continue;
+
+        const xmlText = await response.text();
+
+        // Parse XML response (simplified - looking for key fields)
+        // Extract title
+        const titleMatch = xmlText.match(/<dc:title[^>]*>(.*?)<\/dc:title>/);
+        if (!titleMatch) continue;
+
+        // Extract description/summary
+        const descMatch = xmlText.match(/<dc:description[^>]*>(.*?)<\/dc:description>/);
+        if (descMatch && descMatch[1]) {
+          result.description = descMatch[1].replace(/<[^>]*>/g, '').trim();
+        }
+
+        // Extract publisher
+        const publisherMatch = xmlText.match(/<dc:publisher[^>]*>(.*?)<\/dc:publisher>/);
+        if (publisherMatch && publisherMatch[1]) {
+          result.publisher = publisherMatch[1].replace(/<[^>]*>/g, '').trim();
+        }
+
+        // Extract date
+        const dateMatch = xmlText.match(/<dc:date[^>]*>(.*?)<\/dc:date>/);
+        if (dateMatch && dateMatch[1]) {
+          result.publishedDate = dateMatch[1].replace(/<[^>]*>/g, '').trim();
+        }
+
+        // Extract subjects (genres)
+        const subjectMatches = xmlText.match(/<dc:subject[^>]*>(.*?)<\/dc:subject>/g);
+        if (subjectMatches && subjectMatches.length > 0) {
+          const subjects = subjectMatches
+            .map(s => s.replace(/<[^>]*>/g, '').trim())
+            .filter(s => s.length > 0)
+            .slice(0, 3);
+          if (subjects.length > 0) {
+            result.genre = subjects.join(', ');
+          }
+        }
+
+        // If we found some data, return it
+        if (result.description || result.publisher) {
+          break;
+        }
+      } catch (error) {
+        // This strategy failed, try next one
+        continue;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching from WorldCat:', error);
   }
 
   return result;

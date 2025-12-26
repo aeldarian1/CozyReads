@@ -9,7 +9,7 @@ interface ManualBookSelectionModalProps {
     bookId: string;
     title: string;
     author: string;
-    isbn: string;
+    isbn: string | null;
     reason: string;
   };
   onBookSelected: (bookId: string, selectedData: GoogleBook) => Promise<void>;

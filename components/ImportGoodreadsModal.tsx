@@ -14,7 +14,7 @@ interface ImportResult {
     bookId: string;
     title: string;
     author: string;
-    isbn: string;
+    isbn: string | null;
     reason: string;
   }>;
 }
