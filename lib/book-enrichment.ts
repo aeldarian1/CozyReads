@@ -1,6 +1,74 @@
 import { normalizeGenre } from './genre-mapper';
 
 /**
+ * Calculate similarity between two strings (0-1 range)
+ * Uses simple token-based matching for performance
+ */
+function calculateSimilarity(str1: string, str2: string): number {
+  const normalize = (s: string) => s.toLowerCase().trim().replace(/[^\w\s]/g, '');
+  const s1 = normalize(str1);
+  const s2 = normalize(str2);
+
+  // Exact match
+  if (s1 === s2) return 1.0;
+
+  // Contains match
+  if (s1.includes(s2) || s2.includes(s1)) return 0.9;
+
+  // Token-based similarity
+  const tokens1 = s1.split(/\s+/);
+  const tokens2 = s2.split(/\s+/);
+  const matchingTokens = tokens1.filter(t => tokens2.some(t2 => t.includes(t2) || t2.includes(t)));
+
+  return matchingTokens.length / Math.max(tokens1.length, tokens2.length);
+}
+
+/**
+ * Validates if a Hardcover result matches the expected book
+ * More strict than search validation - requires good title/author match
+ */
+function isMatchingBook(
+  hit: any,
+  expectedTitle: string,
+  expectedAuthor: string,
+  expectedISBN?: string | null
+): boolean {
+  const document = hit.document;
+
+  // If we have an ISBN and the result has ISBNs, check for exact match
+  if (expectedISBN && document.isbns && Array.isArray(document.isbns)) {
+    const cleanExpectedISBN = expectedISBN.replace(/[-\s]/g, '');
+    const hasISBNMatch = document.isbns.some((isbn: string) => {
+      const cleanISBN = isbn.replace(/[-\s]/g, '');
+      return cleanISBN === cleanExpectedISBN;
+    });
+
+    // If ISBN matches, it's definitely the right book
+    if (hasISBNMatch) return true;
+  }
+
+  // Calculate title similarity
+  const titleSimilarity = calculateSimilarity(document.title || '', expectedTitle);
+
+  // Require high title similarity (at least 70% match)
+  if (titleSimilarity < 0.7) return false;
+
+  // If title is very similar, check author
+  const authorNames = document.author_names || [];
+  const bookAuthors = authorNames.join(' ');
+  const authorSimilarity = calculateSimilarity(bookAuthors, expectedAuthor);
+
+  // Require at least 40% author match (handles cases where author names differ slightly)
+  if (authorSimilarity >= 0.4) return true;
+
+  // If title match is very high (90%+), accept even without strong author match
+  // This handles cases where author formatting differs (e.g., "J.K. Rowling" vs "Rowling, J.K.")
+  if (titleSimilarity >= 0.9) return true;
+
+  return false;
+}
+
+/**
  * Enriches book data by fetching missing information from Hardcover API (primary) or multiple sources
  * Uses a smart merging strategy to get the best data from all sources
  */
@@ -674,8 +742,16 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
 
         if (!data.data?.search?.results?.hits || data.data.search.results.hits.length === 0) continue;
 
-        // Find best match
-        const book = data.data.search.results.hits[0].document;
+        // Filter results to find matching books
+        const matchingHits = data.data.search.results.hits.filter((hit: any) =>
+          isMatchingBook(hit, title, author, isbn)
+        );
+
+        // If no matching results, try next search strategy
+        if (matchingHits.length === 0) continue;
+
+        // Use the best match (first one after filtering)
+        const book = matchingHits[0].document;
 
         // Extract cover image
         if (book.image?.url) {
@@ -692,12 +768,19 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
           result.pageCount = book.pages;
         }
 
-        // Extract published date (not readily available in search results)
-        // publishedDate is usually in editions, which aren't in search results
+        // Extract release date
+        if (book.release_date) {
+          result.publishedDate = book.release_date;
+        }
 
         // Extract genres
         if (book.genres && Array.isArray(book.genres)) {
           result.genre = book.genres.slice(0, 3).join(', ');
+        }
+
+        // Extract publisher (if available)
+        if (book.publisher) {
+          result.publisher = book.publisher;
         }
 
         // If we found good data, break

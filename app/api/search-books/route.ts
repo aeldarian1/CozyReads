@@ -1,6 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { normalizeGenres } from '@/lib/genre-mapper';
 
+/**
+ * Calculate similarity between two strings (0-1 range)
+ * Uses simple token-based matching for performance
+ */
+function calculateSimilarity(str1: string, str2: string): number {
+  const normalize = (s: string) => s.toLowerCase().trim().replace(/[^\w\s]/g, '');
+  const s1 = normalize(str1);
+  const s2 = normalize(str2);
+
+  // Exact match
+  if (s1 === s2) return 1.0;
+
+  // Contains match
+  if (s1.includes(s2) || s2.includes(s1)) return 0.9;
+
+  // Token-based similarity
+  const tokens1 = s1.split(/\s+/);
+  const tokens2 = s2.split(/\s+/);
+  const matchingTokens = tokens1.filter(t => tokens2.some(t2 => t.includes(t2) || t2.includes(t)));
+
+  return matchingTokens.length / Math.max(tokens1.length, tokens2.length);
+}
+
+/**
+ * Validates if a search result is relevant to the query
+ * Returns true if the result passes quality checks
+ */
+function isRelevantResult(hit: any, searchQuery: string): boolean {
+  const document = hit.document;
+  const highlights = hit.highlights || [];
+
+  // Get matched fields from highlights
+  const titleHighlight = highlights.find((h: any) => h.field === 'title');
+  const authorHighlight = highlights.find((h: any) => h.field === 'author_names');
+  const seriesHighlight = highlights.find((h: any) => h.field === 'series_names');
+
+  // Priority 1: Title must have some match
+  const titleMatchTokens = titleHighlight?.matched_tokens || [];
+  if (titleMatchTokens.length === 0 && !seriesHighlight) {
+    // If title has no matches and series has no matches, likely not relevant
+    return false;
+  }
+
+  // Priority 2: Calculate title similarity with search query
+  const titleSimilarity = calculateSimilarity(document.title || '', searchQuery);
+
+  // Accept if title similarity is high enough
+  if (titleSimilarity >= 0.5) return true;
+
+  // Priority 3: Check if it's a series match (e.g., "Harry Potter" matches series)
+  if (seriesHighlight && titleMatchTokens.length > 0) {
+    return true;
+  }
+
+  // Priority 4: If we have both title and author matches, it's likely relevant
+  if (titleMatchTokens.length > 0 && authorHighlight) {
+    return true;
+  }
+
+  return false;
+}
+
 // Book search API route using Hardcover
 export async function GET(request: NextRequest) {
   try {
@@ -59,32 +121,52 @@ export async function GET(request: NextRequest) {
         }
 
         if (hardcoverData.data?.search?.results?.hits) {
-          books = hardcoverData.data.search.results.hits.map((hit: any) => {
-            const book = hit.document;
+          // Filter and map results, only keeping relevant ones
+          books = hardcoverData.data.search.results.hits
+            .filter((hit: any) => isRelevantResult(hit, query))
+            .map((hit: any) => {
+              const book = hit.document;
 
-            // Extract author names
-            const authors = book.author_names || [];
+              // Extract author names
+              const authors = book.author_names || [];
 
-            // Extract ISBNs (prefer ISBN-13)
-            const isbns = book.isbns || [];
-            const isbn = isbns.find((i: string) => i.length === 13) || isbns[0] || '';
+              // Extract ISBNs (prefer ISBN-13, then ISBN-10)
+              const isbns = book.isbns || [];
+              const isbn13 = isbns.find((i: string) => i.length === 13);
+              const isbn10 = isbns.find((i: string) => i.length === 10);
+              const isbn = isbn13 || isbn10 || isbns[0] || '';
 
-            // Extract and normalize genres
-            const genres = book.genres || [];
-            const normalizedGenres = normalizeGenres(genres.join(', '), 3);
+              // Extract and normalize genres (limit to top 3)
+              const genres = book.genres || [];
+              const normalizedGenres = normalizeGenres(genres.slice(0, 5).join(', '), 3);
 
-            return {
-              title: book.title || '',
-              author: authors.join(', '),
-              isbn,
-              genre: normalizedGenres || '',
-              description: book.description || '',
-              coverUrl: book.image?.url || '',
-              publisher: '',
-              publishedDate: '',
-              totalPages: book.pages || null,
-            };
-          });
+              // Extract series information
+              const series = book.featured_series?.series?.name || null;
+              const seriesNumber = book.featured_series?.position || null;
+
+              // Extract release date (format: YYYY-MM-DD or YYYY)
+              const releaseDate = book.release_date || '';
+
+              // Get high-quality cover image
+              const coverUrl = book.image?.url || '';
+
+              // Extract description (clean HTML if present)
+              const description = book.description || '';
+
+              return {
+                title: book.title || '',
+                author: authors.join(', '),
+                isbn,
+                genre: normalizedGenres || '',
+                description,
+                coverUrl,
+                publisher: '', // Not available in search results
+                publishedDate: releaseDate,
+                totalPages: book.pages || null,
+                series,
+                seriesNumber,
+              };
+            });
         }
       } else {
         console.error('Hardcover API returned error status:', hardcoverResponse.status);
