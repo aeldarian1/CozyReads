@@ -130,10 +130,9 @@ export function mapGoodreadsToCozyReads(row: GoodreadsCSVRow): ParsedBook {
   // Parse rating
   const rating = parseInt(row['My Rating']) || 0;
 
-  // Parse total pages
-  const totalPages = row['Number of Pages'] && row['Number of Pages'].trim() !== ''
-    ? parseInt(row['Number of Pages']) || null
-    : null;
+  // Parse total pages (clean Excel formatting)
+  const pagesStr = row['Number of Pages'] ? cleanExcelText(row['Number of Pages']) : '';
+  const totalPages = pagesStr !== '' ? parseInt(pagesStr) || null : null;
 
   // Get reading status
   const exclusiveShelf = row['Exclusive Shelf']?.toLowerCase().trim() || 'to-read';
@@ -144,7 +143,7 @@ export function mapGoodreadsToCozyReads(row: GoodreadsCSVRow): ParsedBook {
   const dateFinished = readingStatus === 'Finished' ? parseDate(row['Date Read']) : null;
 
   return {
-    goodreadsId: row['Book Id'],
+    goodreadsId: cleanExcelText(row['Book Id']),
     title: row['Title'].trim(),
     author: (row['Author'] || row['Author l-f']).trim(),
     isbn,
