@@ -31,6 +31,16 @@ const defaultColor = '#8b6f47'; // Default warm brown
 const colorCache = new Map<string, string>();
 
 /**
+ * Convert RGB to Hex color
+ */
+function rgbToHex(r: number, g: number, b: number): string {
+  return '#' + [r, g, b].map(x => {
+    const hex = x.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+}
+
+/**
  * Extract dominant color from an image URL using Canvas API
  */
 export async function extractDominantColor(imageUrl: string): Promise<string> {
@@ -40,14 +50,31 @@ export async function extractDominantColor(imageUrl: string): Promise<string> {
   }
 
   return new Promise((resolve) => {
+    // Set timeout to prevent hanging
+    const timeout = setTimeout(() => {
+      resolve(defaultColor);
+    }, 5000);
+
     const img = new Image();
-    img.crossOrigin = 'Anonymous'; // Enable CORS
+
+    // Use proxy for external images to avoid CORS
+    const shouldUseProxy = imageUrl.includes('books.google.com') ||
+                          imageUrl.includes('openlibrary.org');
+
+    const finalImageUrl = shouldUseProxy
+      ? `/api/proxy-image?url=${encodeURIComponent(imageUrl)}`
+      : imageUrl;
+
+    // Set crossOrigin for CORS support (works with proxy)
+    img.crossOrigin = 'anonymous';
 
     img.onload = () => {
+      clearTimeout(timeout);
+
       try {
         // Create canvas and context
         const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
         if (!ctx) {
           resolve(defaultColor);
@@ -62,7 +89,16 @@ export async function extractDominantColor(imageUrl: string): Promise<string> {
         ctx.drawImage(img, 0, 0, 50, 50);
 
         // Get image data
-        const imageData = ctx.getImageData(0, 0, 50, 50);
+        let imageData;
+        try {
+          imageData = ctx.getImageData(0, 0, 50, 50);
+        } catch (corsError) {
+          // CORS blocked - fall back to default color
+          console.warn('CORS blocked color extraction for:', imageUrl);
+          resolve(defaultColor);
+          return;
+        }
+
         const data = imageData.data;
 
         // Calculate average color (simple approach)
@@ -90,23 +126,26 @@ export async function extractDominantColor(imageUrl: string): Promise<string> {
           g = Math.floor(g / pixelCount);
           b = Math.floor(b / pixelCount);
 
-          const color = `rgb(${r}, ${g}, ${b})`;
+          // Convert to hex for consistency
+          const color = rgbToHex(r, g, b);
           colorCache.set(imageUrl, color);
           resolve(color);
         } else {
           resolve(defaultColor);
         }
       } catch (error) {
-        console.error('Error extracting color:', error);
+        console.warn('Error extracting color from:', imageUrl, error);
         resolve(defaultColor);
       }
     };
 
     img.onerror = () => {
+      clearTimeout(timeout);
       resolve(defaultColor);
     };
 
-    img.src = imageUrl;
+    // Start loading the image (using proxy if needed)
+    img.src = finalImageUrl;
   });
 }
 
