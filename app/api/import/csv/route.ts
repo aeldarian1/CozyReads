@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         successCount,
         skipCount,
         errorCount,
-        errors: errors.length > 0 ? errors : null,
+        errors: errors.length > 0 ? errors : undefined,
       },
     });
 
