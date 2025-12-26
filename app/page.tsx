@@ -530,6 +530,25 @@ export default function Home() {
                 }}
               />
               <button
+                onClick={() => window.location.href = '/settings'}
+                className="h-10 w-10 sm:h-11 sm:w-11 md:h-12 md:w-12 flex items-center justify-center rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-xl shadow-md relative overflow-hidden group"
+                style={{
+                  background: 'linear-gradient(135deg, rgba(139, 111, 71, 0.2) 0%, rgba(160, 137, 104, 0.3) 100%)',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  backdropFilter: 'blur(10px)'
+                }}
+                title="Settings"
+              >
+                <span className="relative z-10 text-lg sm:text-xl md:text-2xl">
+                  ⚙️
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.3) 50%, transparent 100%)'
+                  }}
+                />
+              </button>
+              <button
                 onClick={() => window.location.href = '/recommendations'}
                 className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
                 style={{
