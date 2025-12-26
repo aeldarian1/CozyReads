@@ -1,3 +1,5 @@
+import { normalizeGenre } from './genre-mapper';
+
 /**
  * Enriches book data by fetching missing information from Google Books API and Open Library
  * Uses a smart merging strategy to get the best data from both sources
@@ -55,20 +57,25 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
     const descriptions = [googleDesc, openLibDesc, worldCatDesc, hardcoverDesc].sort((a, b) => b.length - a.length);
     result.description = descriptions[0] || null;
 
-    // Genre: Combine unique genres from all sources
+    // Genre: Combine and normalize unique genres from all sources
     const genres = new Set<string>();
-    if (google?.genre) {
-      google.genre.split(',').forEach(g => genres.add(g.trim()));
-    }
-    if (hardcover?.genre) {
-      hardcover.genre.split(',').forEach(g => genres.add(g.trim()));
-    }
-    if (openLib?.genre) {
-      openLib.genre.split(',').forEach(g => genres.add(g.trim()));
-    }
-    if (worldCat?.genre) {
-      worldCat.genre.split(',').forEach(g => genres.add(g.trim()));
-    }
+
+    // Normalize and add genres from each source
+    const addNormalizedGenres = (rawGenre: string | null | undefined) => {
+      if (!rawGenre) return;
+      rawGenre.split(',').forEach(g => {
+        const normalized = normalizeGenre(g.trim());
+        if (normalized) {
+          genres.add(normalized);
+        }
+      });
+    };
+
+    addNormalizedGenres(google?.genre);
+    addNormalizedGenres(hardcover?.genre);
+    addNormalizedGenres(openLib?.genre);
+    addNormalizedGenres(worldCat?.genre);
+
     result.genre = genres.size > 0 ? Array.from(genres).slice(0, 3).join(', ') : null;
 
     // Metadata: Prefer Google Books (most reliable), fallback to Hardcover, then others

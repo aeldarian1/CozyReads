@@ -1,9 +1,80 @@
 'use client';
 
 import { Book } from '@/app/page';
+import { useState } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
-export function Analytics({ books }: { books: Book[] }) {
+export function Analytics({ books, onBooksUpdated }: { books: Book[]; onBooksUpdated?: () => void }) {
+  const [isNormalizing, setIsNormalizing] = useState(false);
+  const [isStandardizing, setIsStandardizing] = useState(false);
+
+  const handleNormalizeGenres = async () => {
+    if (!confirm('This will normalize all book genres in your library. Continue?')) {
+      return;
+    }
+
+    setIsNormalizing(true);
+    try {
+      const response = await fetch('/api/normalize-genres', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`✅ Successfully normalized ${data.stats.updated} book genres!\n\nUpdated: ${data.stats.updated}\nUnchanged: ${data.stats.unchanged}\n\nRefreshing page...`);
+
+        // Refresh the page to show updated genres
+        if (onBooksUpdated) {
+          onBooksUpdated();
+        } else {
+          window.location.reload();
+        }
+      } else {
+        throw new Error(data.error || 'Failed to normalize genres');
+      }
+    } catch (error) {
+      console.error('Error normalizing genres:', error);
+      alert('❌ Failed to normalize genres. Please try again.');
+    } finally {
+      setIsNormalizing(false);
+    }
+  };
+
+  const handleStandardizeBooks = async () => {
+    if (!confirm('This will standardize authors, titles, and reading status for all books in your library. Continue?')) {
+      return;
+    }
+
+    setIsStandardizing(true);
+    try {
+      const response = await fetch('/api/standardize-books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert(`✅ Successfully standardized book data!\n\nAuthors: ${data.stats.authorsUpdated}\nTitles: ${data.stats.titlesUpdated}\nStatus: ${data.stats.statusUpdated}\nSeries Extracted: ${data.stats.seriesExtracted}\n\nRefreshing page...`);
+
+        // Refresh the page to show updated data
+        if (onBooksUpdated) {
+          onBooksUpdated();
+        } else {
+          window.location.reload();
+        }
+      } else {
+        throw new Error(data.error || 'Failed to standardize books');
+      }
+    } catch (error) {
+      console.error('Error standardizing books:', error);
+      alert('❌ Failed to standardize books. Please try again.');
+    } finally {
+      setIsStandardizing(false);
+    }
+  };
   // Genre Distribution Data
   const genreData = books.reduce((acc: { [key: string]: number }, book) => {
     const genre = book.genre || 'Uncategorized';
@@ -69,16 +140,32 @@ export function Analytics({ books }: { books: Book[] }) {
         border: '1px solid var(--border-color)',
         boxShadow: '0 10px 30px rgba(93, 78, 55, 0.15)',
       }}>
-        <h2 className="text-3xl font-black mb-2" style={{
-          color: 'var(--text-dark)',
-          fontFamily: 'var(--font-playfair), serif',
-          textShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
-        }}>
-          📊 Reading Analytics
-        </h2>
-        <p className="text-lg" style={{ color: 'var(--text-muted)' }}>
-          Insights into your reading journey
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-3xl font-black mb-2" style={{
+              color: 'var(--text-dark)',
+              fontFamily: 'var(--font-playfair), serif',
+              textShadow: '0 2px 4px rgba(0, 0, 0, 0.05)'
+            }}>
+              📊 Reading Analytics
+            </h2>
+            <p className="text-lg" style={{ color: 'var(--text-muted)' }}>
+              Insights into your reading journey
+            </p>
+          </div>
+          <button
+            onClick={handleStandardizeBooks}
+            disabled={isStandardizing}
+            className="px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: isStandardizing ? 'var(--text-muted)' : 'var(--warm-brown)',
+              color: '#ffffff',
+              boxShadow: '0 2px 8px rgba(139, 111, 71, 0.3)',
+            }}
+          >
+            {isStandardizing ? '⏳ Standardizing...' : '🔧 Standardize All Books'}
+          </button>
+        </div>
       </div>
 
       {/* Quick Stats */}
@@ -117,7 +204,23 @@ export function Analytics({ books }: { books: Book[] }) {
         </ChartCard>
 
         {/* Genre Distribution */}
-        <ChartCard title="🥧 Genre Distribution">
+        <ChartCard
+          title="🥧 Genre Distribution"
+          action={
+            <button
+              onClick={handleNormalizeGenres}
+              disabled={isNormalizing}
+              className="px-4 py-2 rounded-lg font-semibold text-sm transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{
+                background: isNormalizing ? 'var(--text-muted)' : 'var(--warm-brown)',
+                color: '#ffffff',
+                boxShadow: '0 2px 8px rgba(139, 111, 71, 0.3)',
+              }}
+            >
+              {isNormalizing ? '⏳ Normalizing...' : '✨ Normalize Genres'}
+            </button>
+          }
+        >
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
               <Pie
@@ -209,7 +312,7 @@ export function Analytics({ books }: { books: Book[] }) {
   );
 }
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (
     <div
       className="rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-300"
@@ -219,12 +322,15 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
         boxShadow: '0 8px 24px rgba(93, 78, 55, 0.12)',
       }}
     >
-      <h3 className="text-xl font-bold mb-4" style={{
-        color: 'var(--text-dark)',
-        fontFamily: 'var(--font-playfair), serif',
-      }}>
-        {title}
-      </h3>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-xl font-bold" style={{
+          color: 'var(--text-dark)',
+          fontFamily: 'var(--font-playfair), serif',
+        }}>
+          {title}
+        </h3>
+        {action && <div>{action}</div>}
+      </div>
       {children}
     </div>
   );

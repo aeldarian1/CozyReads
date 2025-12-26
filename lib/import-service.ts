@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { ParsedBook } from './csv-parser';
 import { enrichBookFromGoogleBooks } from './book-enrichment';
+import { standardizeAuthors, standardizeTitle, standardizeReadingStatus } from './standardization';
 
 export interface ImportResult {
   totalProcessed: number;
@@ -178,22 +179,29 @@ export async function importGoodreadsBooks(
             externalMetadata.enrichedPageCount = enrichedData.pageCount;
           }
 
+          // Standardize book data before saving
+          const standardizedAuthor = standardizeAuthors(book.author);
+          const { title: standardizedTitle, series, seriesNumber } = standardizeTitle(book.title);
+          const standardizedStatus = standardizeReadingStatus(book.readingStatus);
+
           // Use transaction to ensure atomicity
           const createdBook = await prisma.$transaction(async (tx) => {
             // Create book
             const newBook = await tx.book.create({
               data: {
                 userId,
-                title: book.title,
-                author: book.author,
+                title: standardizedTitle,
+                author: standardizedAuthor,
                 isbn: book.isbn || null,
                 genre: enrichedData.genre || book.genre,
                 description: descriptionToUse,
                 coverUrl: enrichedData.coverUrl,
                 rating: book.rating || 0,
                 review: book.review,
-                readingStatus: book.readingStatus,
+                readingStatus: standardizedStatus,
                 totalPages: finalTotalPages,
+                series: series,
+                seriesNumber: seriesNumber,
                 dateAdded: book.dateAdded,
                 dateFinished: book.dateFinished,
                 goodreadsId: book.goodreadsId,
@@ -229,8 +237,8 @@ export async function importGoodreadsBooks(
           if (needsManualVerification) {
             result.needsVerification.push({
               bookId: createdBook.id,
-              title: book.title,
-              author: book.author,
+              title: standardizedTitle,
+              author: standardizedAuthor,
               isbn: book.isbn,
               reason: `Missing ${verificationReasons.join(' and ')}`,
             });

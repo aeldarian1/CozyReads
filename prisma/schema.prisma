@@ -42,6 +42,8 @@ model Book {
   review        String?
   currentPage   Int?
   totalPages    Int?
+  series        String?  // Series name (e.g., "Harry Potter")
+  seriesNumber  Int?     // Position in series (e.g., 1, 2, 3)
   dateAdded     DateTime @default(now())
   dateFinished  DateTime?
 
