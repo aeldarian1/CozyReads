@@ -24,6 +24,75 @@ function calculateSimilarity(str1: string, str2: string): number {
 }
 
 /**
+ * Checks if a title indicates a summary, study guide, or book about another book
+ */
+function isSummaryOrStudyGuide(title: string): boolean {
+  const lowerTitle = title.toLowerCase();
+  const summaryIndicators = [
+    'summary',
+    'summary:',
+    'study guide',
+    'instaread',
+    'sparknotes',
+    'cliffsnotes',
+    'book summary',
+    'analysis',
+    'lektürehilfen', // German study guides
+    'erläuterungen', // German explanations
+    'guide to',
+    'companion',
+    'workbook',
+    'discussion guide',
+  ];
+
+  return summaryIndicators.some(indicator => lowerTitle.includes(indicator));
+}
+
+/**
+ * Score a book result based on how well it matches expected title/author
+ * Returns a score from 0-100 (higher is better)
+ */
+function scoreBookMatch(
+  document: any,
+  expectedTitle: string,
+  expectedAuthor: string,
+  expectedISBN?: string | null
+): number {
+  let score = 0;
+
+  // ISBN exact match is worth 50 points (very strong signal)
+  if (expectedISBN && document.isbns && Array.isArray(document.isbns)) {
+    const cleanExpectedISBN = expectedISBN.replace(/[-\s]/g, '');
+    const hasISBNMatch = document.isbns.some((isbn: string) => {
+      const cleanISBN = isbn.replace(/[-\s]/g, '');
+      return cleanISBN === cleanExpectedISBN;
+    });
+    if (hasISBNMatch) score += 50;
+  }
+
+  // Title similarity (up to 30 points)
+  const titleSimilarity = calculateSimilarity(document.title || '', expectedTitle);
+  score += titleSimilarity * 30;
+
+  // Author similarity (up to 20 points)
+  const authorNames = document.author_names || [];
+  const bookAuthors = authorNames.join(' ');
+  const authorSimilarity = calculateSimilarity(bookAuthors, expectedAuthor);
+  score += authorSimilarity * 20;
+
+  // Bonus points for having cover and description
+  if (document.image?.url) score += 5;
+  if (document.description) score += 5;
+
+  // Penalty for being a summary/study guide (even if other criteria match)
+  if (isSummaryOrStudyGuide(document.title || '')) {
+    score -= 50;
+  }
+
+  return score;
+}
+
+/**
  * Validates if a Hardcover result matches the expected book
  * More strict than search validation - requires good title/author match
  */
@@ -35,6 +104,11 @@ function isMatchingBook(
 ): boolean {
   const document = hit.document;
 
+  // Reject summary books and study guides
+  if (isSummaryOrStudyGuide(document.title || '')) {
+    return false;
+  }
+
   // If we have an ISBN and the result has ISBNs, check for exact match
   if (expectedISBN && document.isbns && Array.isArray(document.isbns)) {
     const cleanExpectedISBN = expectedISBN.replace(/[-\s]/g, '');
@@ -43,7 +117,7 @@ function isMatchingBook(
       return cleanISBN === cleanExpectedISBN;
     });
 
-    // If ISBN matches, it's definitely the right book
+    // If ISBN matches, it's definitely the right book (even if title/author differ)
     if (hasISBNMatch) return true;
   }
 
@@ -53,17 +127,18 @@ function isMatchingBook(
   // Require high title similarity (at least 70% match)
   if (titleSimilarity < 0.7) return false;
 
-  // If title is very similar, check author
+  // STRICT AUTHOR CHECK: If we're searching with an author, the result must have matching author
   const authorNames = document.author_names || [];
   const bookAuthors = authorNames.join(' ');
   const authorSimilarity = calculateSimilarity(bookAuthors, expectedAuthor);
 
-  // Require at least 40% author match (handles cases where author names differ slightly)
-  if (authorSimilarity >= 0.4) return true;
+  // Require at least 50% author match (stricter than before)
+  // This prevents accepting "Summary: Atomic Habits" by a different author
+  if (authorSimilarity >= 0.5) return true;
 
-  // If title match is very high (90%+), accept even without strong author match
-  // This handles cases where author formatting differs (e.g., "J.K. Rowling" vs "Rowling, J.K.")
-  if (titleSimilarity >= 0.9) return true;
+  // Edge case: If title match is very high (95%+) and author is similar (30%+), accept
+  // This handles cases where author formatting differs significantly
+  if (titleSimilarity >= 0.95 && authorSimilarity >= 0.3) return true;
 
   return false;
 }
@@ -123,16 +198,18 @@ export async function enrichBookFromGoogleBooks(
       return result;
     }
 
-    // If Hardcover found the book with good data, use it and skip other sources
-    const hardcoverFoundBook = hardcover && (hardcover.coverUrl || hardcover.description);
-
+    // ALWAYS query Google Books for critical data validation
+    // Google Books is very reliable and helps catch incorrect Hardcover data
     let google = null;
     let openLib = null;
     let worldCat = null;
 
-    // Only query other sources if Hardcover didn't find the book
-    if (!hardcoverFoundBook) {
-      // Fallback to other sources in parallel
+    // Strategy: Always fetch from Google Books (most reliable)
+    // Only fetch from OpenLibrary/WorldCat if we're missing critical data
+    const hardcoverHasGoodData = hardcover && hardcover.coverUrl && hardcover.description;
+
+    if (!hardcoverHasGoodData) {
+      // If Hardcover is missing data, query all sources
       const [googleResult, openLibraryResult, worldCatResult] = await Promise.allSettled([
         fetchFromGoogleBooks(isbn, title, author),
         fetchFromOpenLibrary(isbn, title, author),
@@ -142,10 +219,18 @@ export async function enrichBookFromGoogleBooks(
       google = googleResult.status === 'fulfilled' ? googleResult.value : null;
       openLib = openLibraryResult.status === 'fulfilled' ? openLibraryResult.value : null;
       worldCat = worldCatResult.status === 'fulfilled' ? worldCatResult.value : null;
+    } else {
+      // Hardcover has data, but still check Google Books for validation/better data
+      try {
+        google = await fetchFromGoogleBooks(isbn, title, author);
+      } catch (error) {
+        // Google Books failed, continue with Hardcover data
+      }
     }
 
-    // Cover URL: Prefer Hardcover for highest quality, fallback to Google Books
-    result.coverUrl = hardcover?.coverUrl || google?.coverUrl || openLib?.coverUrl || worldCat?.coverUrl || null;
+    // Cover URL: Prefer Google Books (most reliable/accurate), then Hardcover (higher quality)
+    // This prevents mismatched covers from Hardcover's sometimes inconsistent data
+    result.coverUrl = google?.coverUrl || hardcover?.coverUrl || openLib?.coverUrl || worldCat?.coverUrl || null;
 
     // Description: Always pick the longest (most detailed) from any source
     const googleDesc = google?.description || '';
@@ -750,8 +835,15 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
         // If no matching results, try next search strategy
         if (matchingHits.length === 0) continue;
 
-        // Use the best match (first one after filtering)
-        const book = matchingHits[0].document;
+        // Score all matching results and pick the best one
+        const scoredHits = matchingHits.map((hit: any) => ({
+          hit,
+          score: scoreBookMatch(hit.document, title, author, isbn)
+        }));
+
+        // Sort by score (descending) and pick the best match
+        scoredHits.sort((a: any, b: any) => b.score - a.score);
+        const book = scoredHits[0].hit.document;
 
         // Extract cover image
         if (book.image?.url) {
