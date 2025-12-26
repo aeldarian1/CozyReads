@@ -16,6 +16,7 @@ import { Analytics } from '@/components/Analytics';
 import { QuickEditMenu } from '@/components/QuickEditMenu';
 import { CollectionsManager } from '@/components/CollectionsManager';
 import { ImportGoodreadsModal } from '@/components/ImportGoodreadsModal';
+import { ImportCSVModal } from '@/components/ImportCSVModal';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 
 export type Book = {
@@ -54,6 +55,7 @@ export default function Home() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isCSVImportModalOpen, setIsCSVImportModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
   const [editingBook, setEditingBook] = useState<Book | null>(null);
@@ -527,6 +529,27 @@ export default function Home() {
                 }}
               />
               <button
+                onClick={() => window.location.href = '/recommendations'}
+                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
+                style={{
+                  background: 'linear-gradient(135deg, #a08968 0%, #8b6f47 100%)',
+                  color: '#fef3e2',
+                  boxShadow: '0 6px 20px rgba(160, 137, 104, 0.4)',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg">💡</span>
+                  <span className="hidden lg:inline">Discover</span>
+                  <span className="inline lg:hidden">💡</span>
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
+                  }}
+                />
+              </button>
+              <button
                 onClick={() => window.location.href = '/goals'}
                 className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
                 style={{
@@ -605,6 +628,28 @@ export default function Home() {
                   <span className="hidden lg:inline">Import from Goodreads</span>
                   <span className="hidden sm:inline lg:hidden">Import</span>
                   <span className="inline sm:hidden">📥</span>
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
+                  }}
+                />
+              </button>
+              <button
+                onClick={() => setIsCSVImportModalOpen(true)}
+                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
+                style={{
+                  background: 'linear-gradient(135deg, #5d7052 0%, #6d8a96 100%)',
+                  color: '#fef3e2',
+                  boxShadow: '0 6px 20px rgba(93, 112, 82, 0.4)',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg">📄</span>
+                  <span className="hidden lg:inline">Import CSV</span>
+                  <span className="hidden sm:inline lg:hidden">CSV</span>
+                  <span className="inline sm:hidden">📄</span>
                 </span>
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   style={{
@@ -769,6 +814,15 @@ export default function Home() {
         onImportComplete={() => {
           loadBooks();
           loadCollections();
+        }}
+      />
+
+      {/* Import CSV Modal */}
+      <ImportCSVModal
+        isOpen={isCSVImportModalOpen}
+        onClose={() => setIsCSVImportModalOpen(false)}
+        onImportComplete={() => {
+          loadBooks();
         }}
       />
 
