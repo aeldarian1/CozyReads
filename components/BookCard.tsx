@@ -218,7 +218,7 @@ export function BookCard({
 
         {/* Action hint overlay on hover - only over cover */}
         <div
-          className="absolute inset-0 transition-all duration-300 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100"
+          className="absolute inset-0 transition-all duration-300 pointer-events-none flex items-end justify-center pb-6 opacity-0 group-hover:opacity-100"
           style={{
             background: 'rgba(0, 0, 0, 0.5)',
           }}
