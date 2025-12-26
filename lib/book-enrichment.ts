@@ -34,10 +34,10 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
     const worldCat = worldCatResult.status === 'fulfilled' ? worldCatResult.value : null;
     const hardcover = hardcoverResult.status === 'fulfilled' ? hardcoverResult.value : null;
 
-    // Cover URL: Prefer high-quality covers, Hardcover often has best quality
+    // Cover URL: Prefer Hardcover for highest quality, fallback to Google Books
     result.coverUrl = hardcover?.coverUrl || google?.coverUrl || openLib?.coverUrl || worldCat?.coverUrl || null;
 
-    // Description: Prefer longer, more detailed descriptions
+    // Description: Always pick the longest (most detailed) from any source
     const googleDesc = google?.description || '';
     const openLibDesc = openLib?.description || '';
     const worldCatDesc = worldCat?.description || '';
@@ -50,21 +50,21 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
     if (google?.genre) {
       google.genre.split(',').forEach(g => genres.add(g.trim()));
     }
+    if (hardcover?.genre) {
+      hardcover.genre.split(',').forEach(g => genres.add(g.trim()));
+    }
     if (openLib?.genre) {
       openLib.genre.split(',').forEach(g => genres.add(g.trim()));
     }
     if (worldCat?.genre) {
       worldCat.genre.split(',').forEach(g => genres.add(g.trim()));
     }
-    if (hardcover?.genre) {
-      hardcover.genre.split(',').forEach(g => genres.add(g.trim()));
-    }
     result.genre = genres.size > 0 ? Array.from(genres).slice(0, 3).join(', ') : null;
 
-    // Additional metadata - prefer Hardcover/Google Books, fallback to others
-    result.publisher = hardcover?.publisher || google?.publisher || worldCat?.publisher || openLib?.publisher || null;
-    result.publishedDate = hardcover?.publishedDate || google?.publishedDate || worldCat?.publishedDate || openLib?.publishedDate || null;
-    result.pageCount = hardcover?.pageCount || google?.pageCount || worldCat?.pageCount || openLib?.pageCount || null;
+    // Metadata: Prefer Google Books (most reliable), fallback to Hardcover, then others
+    result.publisher = google?.publisher || hardcover?.publisher || worldCat?.publisher || openLib?.publisher || null;
+    result.publishedDate = google?.publishedDate || hardcover?.publishedDate || worldCat?.publishedDate || openLib?.publishedDate || null;
+    result.pageCount = google?.pageCount || hardcover?.pageCount || worldCat?.pageCount || openLib?.pageCount || null;
 
   } catch (error) {
     console.error('Error enriching book data:', error);
