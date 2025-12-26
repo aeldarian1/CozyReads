@@ -19,24 +19,24 @@ export async function GET(request: NextRequest) {
     try {
       const hardcoverQuery = `
         query SearchBooks($query: String!) {
-          books(where: { query: $query }, limit: 15) {
-            title
-            description
-            image
-            pages
-            release_date
-            contributions {
-              author {
-                name
+          search(query: $query, query_type: "books", limit: 15) {
+            results {
+              ... on Book {
+                title
+                description
+                image
+                pages
+                release_date
+                cached_contributors {
+                  name
+                }
+                editions {
+                  isbn_10
+                  isbn_13
+                  publisher_name
+                }
+                cached_tags
               }
-            }
-            editions {
-              isbn_10
-              isbn_13
-              publisher_name
-            }
-            genres {
-              name
             }
           }
         }
@@ -74,19 +74,21 @@ export async function GET(request: NextRequest) {
           console.error('Hardcover GraphQL Errors:', JSON.stringify(hardcoverData.errors, null, 2));
         }
 
-        if (hardcoverData.data?.books) {
-          books = hardcoverData.data.books.map((book: any) => {
-            // Extract author names
-            const authors = book.contributions
-              ?.map((c: any) => c.author?.name)
+        if (hardcoverData.data?.search?.results) {
+          books = hardcoverData.data.search.results.map((book: any) => {
+            // Extract author names from cached_contributors
+            const authors = book.cached_contributors
+              ?.map((c: any) => c.name)
               .filter(Boolean) || [];
 
             // Extract ISBNs (prefer ISBN-13)
             const edition = book.editions?.[0];
             const isbn = edition?.isbn_13 || edition?.isbn_10 || '';
 
-            // Extract and normalize genres
-            const genreNames = book.genres?.map((g: any) => g.name).join(', ') || '';
+            // Extract and normalize genres from cached_tags
+            const genreNames = Array.isArray(book.cached_tags)
+              ? book.cached_tags.join(', ')
+              : (book.cached_tags || '');
             const normalizedGenres = normalizeGenres(genreNames, 3);
 
             return {

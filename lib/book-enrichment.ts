@@ -602,27 +602,26 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
   };
 
   try {
-    // Hardcover GraphQL API
+    // Hardcover GraphQL API - using search API
     const query = `
       query SearchBooks($query: String!) {
-        books(where: { query: $query }, limit: 5) {
-          title
-          description
-          image
-          pages
-          release_date
-          contributions {
-            author {
-              name
-            }
-          }
-          editions {
-            isbn_10
-            isbn_13
-          }
-          book_series {
-            series {
-              name
+        search(query: $query, query_type: "books", limit: 5) {
+          results {
+            ... on Book {
+              title
+              description
+              image
+              pages
+              release_date
+              cached_contributors {
+                name
+              }
+              editions {
+                isbn_10
+                isbn_13
+                publisher_name
+              }
+              cached_tags
             }
           }
         }
@@ -690,10 +689,10 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
 
         const data = await response.json();
 
-        if (!data.data?.books || data.data.books.length === 0) continue;
+        if (!data.data?.search?.results || data.data.search.results.length === 0) continue;
 
         // Find best match
-        const book = data.data.books[0]; // Use first result for now
+        const book = data.data.search.results[0]; // Use first result for now
 
         // Extract cover image
         if (book.image) {
@@ -715,11 +714,17 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
           result.publishedDate = book.release_date;
         }
 
-        // Extract genre from series if available
-        if (book.book_series && book.book_series.length > 0) {
-          const seriesNames = book.book_series.map((bs: any) => bs.series?.name).filter(Boolean);
-          if (seriesNames.length > 0) {
-            result.genre = seriesNames.slice(0, 3).join(', ');
+        // Extract publisher from editions
+        const edition = book.editions?.[0];
+        if (edition?.publisher_name) {
+          result.publisher = edition.publisher_name;
+        }
+
+        // Extract genres from cached_tags
+        if (book.cached_tags) {
+          const tags = Array.isArray(book.cached_tags) ? book.cached_tags : [];
+          if (tags.length > 0) {
+            result.genre = tags.slice(0, 3).join(', ');
           }
         }
 
