@@ -11,7 +11,6 @@ import { StatsCards } from '@/components/StatsCards';
 import { AdvancedSearch, AdvancedFilters } from '@/components/AdvancedSearch';
 import { AddBookModal } from '@/components/AddBookModal';
 import { ViewBookModal } from '@/components/ViewBookModal';
-import { ReadingGoal } from '@/components/ReadingGoal';
 import { ReadingStreak } from '@/components/ReadingStreak';
 import { ReadingSpeed } from '@/components/ReadingSpeed';
 import { Analytics } from '@/components/Analytics';
@@ -690,9 +689,6 @@ export default function Home() {
       <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
         {/* Stats */}
         <StatsCards books={books} />
-
-        {/* Reading Goal */}
-        <ReadingGoal books={books} />
 
         {/* Reading Streak */}
         <ReadingStreak />
