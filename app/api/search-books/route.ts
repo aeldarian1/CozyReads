@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { normalizeGenres } from '@/lib/genre-mapper';
 
+// Book search API route using Hardcover
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
