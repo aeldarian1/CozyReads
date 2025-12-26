@@ -260,16 +260,24 @@ h1, h2, h3, h4, h5, h6 {
 /* Responsive adjustments for bookshelf */
 @media (max-width: 640px) {
   .book-spine {
-    width: 30px !important;
+    width: 40px !important;
   }
 
   .bookshelf-view {
-    padding: 1rem !important;
+    padding: 0.5rem !important;
+  }
+
+  .shelf {
+    margin-bottom: 1.5rem !important;
   }
 }
 
 @media (min-width: 641px) and (max-width: 1024px) {
   .book-spine {
-    width: 35px !important;
+    width: 45px !important;
+  }
+
+  .shelf {
+    margin-bottom: 2rem !important;
   }
 }

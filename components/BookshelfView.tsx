@@ -105,24 +105,54 @@ export function BookshelfView({ books, onBookClick, searchQuery }: BookshelfView
 
   return (
     <div className="bookshelf-view">
-      {/* Bookshelf background */}
+      {/* Bookshelf background - enhanced with better depth */}
       <div
-        className="min-h-screen rounded-2xl p-6"
+        className="min-h-screen rounded-2xl p-8 relative"
         style={{
-          background: 'linear-gradient(135deg, #f5f1e8 0%, #ede8dc 100%)',
-          boxShadow: 'inset 0 2px 10px rgba(0, 0, 0, 0.05)',
+          background: `
+            radial-gradient(ellipse at top, #f8f4ec 0%, #f0ead9 50%, #e8dcc8 100%),
+            linear-gradient(135deg, #f5f1e8 0%, #ede8dc 100%)
+          `,
+          boxShadow: `
+            inset 0 3px 15px rgba(0, 0, 0, 0.08),
+            inset 0 0 50px rgba(139, 111, 71, 0.03),
+            0 5px 20px rgba(0, 0, 0, 0.1)
+          `,
         }}
       >
-        {/* Wall texture overlay */}
+        {/* Enhanced wall texture overlay */}
         <div
-          className="absolute inset-0 opacity-5 pointer-events-none"
+          className="absolute inset-0 opacity-10 pointer-events-none rounded-2xl"
           style={{
-            backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139, 111, 71, 0.1) 2px, rgba(139, 111, 71, 0.1) 4px)',
+            backgroundImage: `
+              repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(139, 111, 71, 0.08) 2px,
+                rgba(139, 111, 71, 0.08) 4px
+              ),
+              repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 2px,
+                rgba(139, 111, 71, 0.05) 2px,
+                rgba(139, 111, 71, 0.05) 4px
+              )
+            `,
+          }}
+        />
+
+        {/* Subtle vignette effect */}
+        <div
+          className="absolute inset-0 pointer-events-none rounded-2xl"
+          style={{
+            background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.05) 100%)',
           }}
         />
 
         {/* Shelves */}
-        <div className="relative">
+        <div className="relative z-10">
           {shelves.map((shelfBooks, index) => (
             <Shelf
               key={index}
@@ -134,14 +164,24 @@ export function BookshelfView({ books, onBookClick, searchQuery }: BookshelfView
           ))}
         </div>
 
-        {/* Info footer */}
-        <div className="mt-8 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
-          <p>
-            {books.length} {books.length === 1 ? 'book' : 'books'} • {shelves.length} {shelves.length === 1 ? 'shelf' : 'shelves'}
-          </p>
-          <p className="mt-1 text-xs">
-            Click a book spine to view details
-          </p>
+        {/* Enhanced info footer */}
+        <div className="relative z-10 mt-12 text-center">
+          <div
+            className="inline-block px-6 py-3 rounded-lg"
+            style={{
+              background: 'rgba(255, 255, 255, 0.5)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(139, 111, 71, 0.2)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            <p className="font-semibold" style={{ color: 'var(--text-dark)' }}>
+              {books.length} {books.length === 1 ? 'book' : 'books'} • {shelves.length} {shelves.length === 1 ? 'shelf' : 'shelves'}
+            </p>
+            <p className="mt-1 text-xs" style={{ color: 'var(--text-muted)' }}>
+              Click a book spine to view details
+            </p>
+          </div>
         </div>
       </div>
     </div>
