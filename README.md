@@ -26,8 +26,15 @@ Whether you're a casual reader or a bibliophile with hundreds of books, CozyRead
 
 ### 📖 **Core Library Management**
 - **Add Books Manually** - Enter book details by hand with a beautiful, intuitive form
-- **Google Books Integration** - Search and auto-fill book information from Google Books API
-- **Rich Book Details** - Track title, author, ISBN, genre, description, cover images, and more
+- **Multi-Source Book Enrichment** - Automatically fetch book data from 4 sources:
+  - **Hardcover** - Primary source for modern books with high-quality covers
+  - **Google Books** - Comprehensive metadata and descriptions
+  - **OpenLibrary** - Community-curated book information
+  - **WorldCat** - Global library catalog data
+- **Smart Search Strategies** - Advanced title matching for books with series info, subtitles, and ISBN variants
+- **Goodreads Import** - Import your entire library from Goodreads CSV exports
+- **Manual Book Selection** - Search and select correct book data when auto-enrichment is incomplete
+- **Rich Book Details** - Track title, author, ISBN (optional), genre, description, cover images, and more
 - **Reading Status** - Organize books into "Want to Read", "Currently Reading", and "Finished"
 - **Star Ratings** - Rate your books from 1 to 5 stars with an elegant rating interface
 - **Personal Reviews** - Write and save your thoughts about each book
@@ -94,7 +101,10 @@ Whether you're a casual reader or a bibliophile with hundreds of books, CozyRead
 - **Next.js API Routes** - RESTful API endpoints
 
 ### **External APIs**
-- **Google Books API** - Fetch book information and cover images
+- **[Hardcover GraphQL API](https://hardcover.app/)** - Primary source for modern book covers and metadata
+- **[Google Books API](https://developers.google.com/books)** - Comprehensive book information and descriptions
+- **[OpenLibrary API](https://openlibrary.org/developers/api)** - Community-curated book data
+- **[WorldCat Search API](https://www.worldcat.org/)** - Global library catalog integration
 
 ---
 
@@ -150,10 +160,24 @@ Whether you're a casual reader or a bibliophile with hundreds of books, CozyRead
 
 1. Click the **"📚 Add New Book"** button in the navigation bar
 2. Either:
-   - **Search Google Books** - Type a book title/ISBN and select from results
+   - **Search for Books** - Type a book title/ISBN and select from multiple enrichment sources
    - **Fill manually** - Enter book details yourself
 3. Set reading status, rating, and add to collections
 4. Click **"Save Book"**
+
+### **Importing from Goodreads**
+
+1. Export your Goodreads library:
+   - Go to [Goodreads](https://www.goodreads.com/review/import)
+   - Click "Export Library" and download your CSV file
+2. Click the **"📥 Import from Goodreads"** button in the navigation bar
+3. Upload your CSV file
+4. Configure import options:
+   - **Skip Duplicates** - Avoid importing books you already have
+   - **Create Collections** - Auto-create collections from Goodreads shelves
+   - **Enrich from APIs** - Automatically fetch book covers and descriptions
+5. Review import results and manually fix any books with missing data
+6. Click **"Done"** to finish
 
 ### **Creating Collections**
 
@@ -294,12 +318,12 @@ model BookCollection {
 - **☁️ Cloud Sync** - Sync library across devices
 - **👥 Social Features** - Share recommendations with friends
 - **📈 Enhanced Analytics** - More reading insights and trends
-- **🎯 Smart Recommendations** - AI-powered book suggestions
+- **🎯 Smart Recommendations** - AI-powered book suggestions based on reading history
 - **📖 Reading Challenges** - Community reading challenges
-- **🔗 Goodreads Integration** - Import from Goodreads
 - **🎧 Audiobook Support** - Track audiobook progress
 - **📝 Quotes Collection** - Save favorite quotes from books
 - **🏷️ Custom Tags** - Additional organizational flexibility
+- **🔄 LibraryThing Import** - Import from other library management platforms
 
 ---
 
@@ -339,7 +363,10 @@ This project is licensed under the **MIT License** - feel free to use it for per
 
 ## 🙏 Acknowledgments
 
-- **Google Books API** for providing book information
+- **Hardcover** for their excellent GraphQL API and book covers
+- **Google Books API** for comprehensive book metadata
+- **OpenLibrary** for community-curated book information
+- **WorldCat** for global library catalog data
 - **Playfair Display** and system fonts for beautiful typography
 - **Next.js team** for an amazing framework
 - **Prisma team** for excellent database tooling

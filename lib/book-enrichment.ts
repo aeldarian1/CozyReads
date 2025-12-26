@@ -97,6 +97,14 @@ async function fetchFromGoogleBooks(isbn: string | null, title: string, author: 
     // Normalize and clean ISBN (support both ISBN-10 and ISBN-13)
     const cleanISBN = isbn ? isbn.replace(/[-\s='"]/g, '') : null;
 
+    // Clean title variations
+    const cleanTitle = title.trim();
+    const cleanAuthor = author.trim();
+    const titleWithoutSeries = cleanTitle.replace(/\s*\([^)]*\)\s*/g, '').trim();
+    const titleBeforeColon = cleanTitle.split(':')[0].trim();
+    const titleBeforeColonNoSeries = titleBeforeColon.replace(/\s*\([^)]*\)\s*/g, '').trim();
+    const authorLastName = cleanAuthor.split(' ').pop();
+
     // Try multiple search strategies for better accuracy
     const searchStrategies = [];
 
@@ -113,39 +121,38 @@ async function fetchFromGoogleBooks(isbn: string | null, title: string, author: 
       });
     }
 
-    // Strategy 2: Combined title and author search (exact match)
-    const cleanTitle = title.trim();
-    const cleanAuthor = author.trim();
+    // Strategy 2: Title variations + author
     searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:"${cleanAuthor}"`);
 
-    // Strategy 3: Title only with partial author (helps with middle names/initials)
-    const authorLastName = cleanAuthor.split(' ').pop();
-    if (authorLastName && authorLastName.length > 2) {
-      searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:${authorLastName}`);
+    if (titleBeforeColon !== cleanTitle) {
+      searchStrategies.push(`intitle:"${titleBeforeColon}"+inauthor:"${cleanAuthor}"`);
     }
 
-    // Strategy 4: Remove subtitle from title (before colon or dash)
-    const mainTitle = cleanTitle.split(':')[0].split('-')[0].trim();
-    if (mainTitle !== cleanTitle && mainTitle.length > 3) {
-      searchStrategies.push(`intitle:"${mainTitle}"+inauthor:"${cleanAuthor}"`);
-    }
-
-    // Strategy 5: Remove series info (anything in parentheses)
-    const titleWithoutSeries = cleanTitle.replace(/\([^)]*\)/g, '').trim();
-    if (titleWithoutSeries !== cleanTitle && titleWithoutSeries.length > 3) {
+    if (titleWithoutSeries !== cleanTitle) {
       searchStrategies.push(`intitle:"${titleWithoutSeries}"+inauthor:"${cleanAuthor}"`);
     }
 
-    // Strategy 6: First significant word of title + full author
-    const firstWords = cleanTitle.split(' ').slice(0, 3).join(' ');
-    if (firstWords.length > 5) {
-      searchStrategies.push(`intitle:${firstWords}+inauthor:"${cleanAuthor}"`);
+    if (titleBeforeColonNoSeries !== cleanTitle && titleBeforeColonNoSeries !== titleBeforeColon) {
+      searchStrategies.push(`intitle:"${titleBeforeColonNoSeries}"+inauthor:"${cleanAuthor}"`);
     }
 
-    // Strategy 7: Fallback without quotes (broader search)
+    // Strategy 3: Title variations with author last name
+    if (authorLastName && authorLastName.length > 2) {
+      searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:${authorLastName}`);
+
+      if (titleBeforeColon !== cleanTitle) {
+        searchStrategies.push(`intitle:"${titleBeforeColon}"+inauthor:${authorLastName}`);
+      }
+    }
+
+    // Strategy 4: Fallback without quotes (broader search)
     searchStrategies.push(`intitle:${cleanTitle}+inauthor:${cleanAuthor}`);
 
-    // Strategy 8: Just title if all else fails
+    if (titleBeforeColon !== cleanTitle) {
+      searchStrategies.push(`intitle:${titleBeforeColon}+inauthor:${cleanAuthor}`);
+    }
+
+    // Strategy 5: Just title if all else fails
     searchStrategies.push(`intitle:"${cleanTitle}"`);
 
     // Try each strategy until we get results
@@ -314,15 +321,30 @@ async function fetchFromOpenLibrary(isbn: string | null, title: string, author: 
     }
 
     // Fallback to title/author search with multiple strategies
+    // Clean title variations
+    const cleanTitle = title.trim();
+    const cleanAuthor = author.trim();
+    const titleWithoutSeries = cleanTitle.replace(/\s*\([^)]*\)\s*/g, '').trim();
+    const titleBeforeColon = cleanTitle.split(':')[0].trim();
+    const titleBeforeColonNoSeries = titleBeforeColon.replace(/\s*\([^)]*\)\s*/g, '').trim();
+    const authorLastName = cleanAuthor.split(' ').pop() || cleanAuthor;
+
     const searchStrategies = [
       // Strategy 1: Exact title and author
-      { title, author },
-      // Strategy 2: Remove subtitle (before colon)
-      { title: title.split(':')[0].trim(), author },
-      // Strategy 3: Remove series info (parentheses)
-      { title: title.replace(/\([^)]*\)/g, '').trim(), author },
-      // Strategy 4: Author last name only
-      { title, author: author.split(' ').pop() || author },
+      { title: cleanTitle, author: cleanAuthor },
+      // Strategy 2: Title before colon (handles long subtitles)
+      ...(titleBeforeColon !== cleanTitle ? [{ title: titleBeforeColon, author: cleanAuthor }] : []),
+      // Strategy 3: Title without series info (handles parentheses)
+      ...(titleWithoutSeries !== cleanTitle ? [{ title: titleWithoutSeries, author: cleanAuthor }] : []),
+      // Strategy 4: Title before colon without series
+      ...(titleBeforeColonNoSeries !== cleanTitle && titleBeforeColonNoSeries !== titleBeforeColon
+        ? [{ title: titleBeforeColonNoSeries, author: cleanAuthor }] : []),
+      // Strategy 5: Author last name only with full title
+      { title: cleanTitle, author: authorLastName },
+      // Strategy 6: Title before colon with author last name
+      ...(titleBeforeColon !== cleanTitle ? [{ title: titleBeforeColon, author: authorLastName }] : []),
+      // Strategy 7: Title without series with author last name
+      ...(titleWithoutSeries !== cleanTitle ? [{ title: titleWithoutSeries, author: authorLastName }] : []),
     ];
 
     for (const { title: searchTitle, author: searchAuthor } of searchStrategies) {
@@ -420,15 +442,55 @@ async function fetchFromWorldCat(isbn: string | null, title: string, author: str
     if (isbn) {
       const cleanISBN = isbn.replace(/[-\s]/g, '');
       searchStrategies.push(`srw.isbn="${cleanISBN}"`);
+
+      // Try ISBN variants (ISBN-10 and ISBN-13)
+      const isbnVariants = getISBNVariants(cleanISBN);
+      isbnVariants.forEach(variant => {
+        if (variant !== cleanISBN) {
+          searchStrategies.push(`srw.isbn="${variant}"`);
+        }
+      });
     }
 
-    // Try title + author
+    // Clean title variations
     const cleanTitle = title.trim().replace(/[:"]/g, '');
     const cleanAuthor = author.trim();
+    const titleWithoutSeries = title.replace(/\s*\([^)]*\)\s*/g, '').trim().replace(/[:"]/g, '');
+    const titleBeforeColon = title.split(':')[0].trim().replace(/[:"]/g, '');
+    const titleBeforeColonNoSeries = titleBeforeColon.replace(/\s*\([^)]*\)\s*/g, '').trim();
+    const authorLastName = cleanAuthor.split(' ').pop() || cleanAuthor;
+
+    // Strategy 1: Full title + author
     searchStrategies.push(`srw.ti="${cleanTitle}" and srw.au="${cleanAuthor}"`);
 
-    // Try just title if author fails
+    // Strategy 2: Title before colon + author (handles long subtitles)
+    if (titleBeforeColon !== cleanTitle) {
+      searchStrategies.push(`srw.ti="${titleBeforeColon}" and srw.au="${cleanAuthor}"`);
+    }
+
+    // Strategy 3: Title without series + author (handles parentheses)
+    if (titleWithoutSeries !== cleanTitle) {
+      searchStrategies.push(`srw.ti="${titleWithoutSeries}" and srw.au="${cleanAuthor}"`);
+    }
+
+    // Strategy 4: Title before colon without series + author
+    if (titleBeforeColonNoSeries !== cleanTitle && titleBeforeColonNoSeries !== titleBeforeColon) {
+      searchStrategies.push(`srw.ti="${titleBeforeColonNoSeries}" and srw.au="${cleanAuthor}"`);
+    }
+
+    // Strategy 5: Full title + author last name
+    searchStrategies.push(`srw.ti="${cleanTitle}" and srw.au="${authorLastName}"`);
+
+    // Strategy 6: Title before colon + author last name
+    if (titleBeforeColon !== cleanTitle) {
+      searchStrategies.push(`srw.ti="${titleBeforeColon}" and srw.au="${authorLastName}"`);
+    }
+
+    // Strategy 7: Just title variations as fallback
     searchStrategies.push(`srw.ti="${cleanTitle}"`);
+    if (titleBeforeColon !== cleanTitle) {
+      searchStrategies.push(`srw.ti="${titleBeforeColon}"`);
+    }
 
     for (const query of searchStrategies) {
       try {
