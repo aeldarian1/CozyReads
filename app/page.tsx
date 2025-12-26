@@ -16,6 +16,8 @@ import { ViewBookModal } from '@/components/ViewBookModal';
 import { QuickEditMenu } from '@/components/QuickEditMenu';
 import { ImportGoodreadsModal } from '@/components/ImportGoodreadsModal';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
+import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
+import { useKeyboardShortcuts } from '@/lib/hooks/useKeyboardShortcuts';
 
 export type Book = {
   id: string;
@@ -53,6 +55,7 @@ export default function Home() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
   const [editingBook, setEditingBook] = useState<Book | null>(null);
@@ -504,6 +507,19 @@ export default function Home() {
     finished: books.filter(b => b.readingStatus === 'Finished').length,
   }), [books, currentlyReading]);
 
+  // Keyboard shortcuts
+  useKeyboardShortcuts([
+    { key: 'a', description: 'Add new book', action: () => setIsAddModalOpen(true) },
+    { key: 'i', description: 'Import from Goodreads', action: () => setIsImportModalOpen(true) },
+    { key: '?', description: 'Show keyboard shortcuts', action: () => setIsShortcutsHelpOpen(true) },
+    { key: 'Escape', description: 'Close modals', action: () => {
+      setIsAddModalOpen(false);
+      setIsViewModalOpen(false);
+      setIsImportModalOpen(false);
+      setIsShortcutsHelpOpen(false);
+    }},
+  ]);
+
   return (
     <div className="min-h-screen">
       {/* Modern Navigation */}
@@ -648,6 +664,12 @@ export default function Home() {
           loadBooks();
           loadCollections();
         }}
+      />
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        isOpen={isShortcutsHelpOpen}
+        onClose={() => setIsShortcutsHelpOpen(false)}
       />
 
       {/* Bulk Actions Bar */}
