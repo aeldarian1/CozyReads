@@ -141,10 +141,12 @@ export async function importGoodreadsBooks(
 
           if (options.enrichFromGoogle) {
             try {
+              // Use Hardcover-only enrichment for faster imports
               enrichedData = await enrichBookFromGoogleBooks(
                 book.isbn,
                 book.title,
-                book.author
+                book.author,
+                true // hardcoverOnly = true
               );
             } catch (error) {
               // Continue without enrichment if it fails

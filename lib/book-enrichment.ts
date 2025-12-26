@@ -1,10 +1,15 @@
 import { normalizeGenre } from './genre-mapper';
 
 /**
- * Enriches book data by fetching missing information from Google Books API and Open Library
- * Uses a smart merging strategy to get the best data from both sources
+ * Enriches book data by fetching missing information from Hardcover API (primary) or multiple sources
+ * Uses a smart merging strategy to get the best data from all sources
  */
-export async function enrichBookFromGoogleBooks(isbn: string | null, title: string, author: string): Promise<{
+export async function enrichBookFromGoogleBooks(
+  isbn: string | null,
+  title: string,
+  author: string,
+  hardcoverOnly: boolean = false
+): Promise<{
   coverUrl: string | null;
   genre: string | null;
   description: string | null;
@@ -24,6 +29,31 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
   try {
     // Try Hardcover first (fastest, best quality for modern books)
     const hardcover = await fetchFromHardcover(isbn, title, author);
+
+    // If Hardcover-only mode, skip other sources entirely
+    if (hardcoverOnly) {
+      result.coverUrl = hardcover?.coverUrl || null;
+      result.description = hardcover?.description || null;
+      result.publisher = hardcover?.publisher || null;
+      result.publishedDate = hardcover?.publishedDate || null;
+      result.pageCount = hardcover?.pageCount || null;
+
+      // Normalize genres from Hardcover
+      const genres = new Set<string>();
+      const addNormalizedGenres = (rawGenre: string | null | undefined) => {
+        if (!rawGenre) return;
+        rawGenre.split(',').forEach(g => {
+          const normalized = normalizeGenre(g.trim());
+          if (normalized) {
+            genres.add(normalized);
+          }
+        });
+      };
+      addNormalizedGenres(hardcover?.genre);
+      result.genre = genres.size > 0 ? Array.from(genres).slice(0, 3).join(', ') : null;
+
+      return result;
+    }
 
     // If Hardcover found the book with good data, use it and skip other sources
     const hardcoverFoundBook = hardcover && (hardcover.coverUrl || hardcover.description);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { normalizeGenres } from '@/lib/genre-mapper';
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,96 +13,80 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Try Google Books API first
+    // Use Hardcover GraphQL API (fastest, best quality)
     let books: any[] = [];
 
     try {
-      const googleUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10`;
-      const googleResponse = await fetch(googleUrl);
-
-      if (googleResponse.ok) {
-        const googleData = await googleResponse.json();
-
-        if (googleData.items) {
-          books = googleData.items.map((item: any) => {
-            const volumeInfo = item.volumeInfo || {};
-
-            // Extract ISBN
-            let isbn = '';
-            if (volumeInfo.industryIdentifiers) {
-              for (const identifier of volumeInfo.industryIdentifiers) {
-                if (identifier.type === 'ISBN_13' || identifier.type === 'ISBN_10') {
-                  isbn = identifier.identifier;
-                  break;
-                }
+      const hardcoverQuery = `
+        query SearchBooks($query: String!) {
+          books(where: { query: $query }, limit: 15) {
+            title
+            description
+            image
+            pages
+            release_date
+            contributions {
+              author {
+                name
               }
             }
-
-            // Extract cover image - use highest quality available
-            let coverUrl = '';
-            if (volumeInfo.imageLinks) {
-              coverUrl =
-                volumeInfo.imageLinks.extraLarge ||
-                volumeInfo.imageLinks.large ||
-                volumeInfo.imageLinks.medium ||
-                volumeInfo.imageLinks.thumbnail ||
-                '';
-              if (coverUrl) {
-                // Upgrade to HTTPS and remove zoom parameter for full size
-                coverUrl = coverUrl.replace('http://', 'https://');
-                // Remove &zoom=1 to get larger images
-                coverUrl = coverUrl.replace('&zoom=1', '');
-                // Try to get larger size by replacing thumbnail with larger size
-                coverUrl = coverUrl.replace('&edge=curl', '');
-              }
+            editions {
+              isbn_10
+              isbn_13
+              publisher_name
             }
+            genres {
+              name
+            }
+          }
+        }
+      `;
+
+      const hardcoverResponse = await fetch('https://hardcover.app/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: hardcoverQuery,
+          variables: { query },
+        }),
+      });
+
+      if (hardcoverResponse.ok) {
+        const hardcoverData = await hardcoverResponse.json();
+
+        if (hardcoverData.data?.books) {
+          books = hardcoverData.data.books.map((book: any) => {
+            // Extract author names
+            const authors = book.contributions
+              ?.map((c: any) => c.author?.name)
+              .filter(Boolean) || [];
+
+            // Extract ISBNs (prefer ISBN-13)
+            const edition = book.editions?.[0];
+            const isbn = edition?.isbn_13 || edition?.isbn_10 || '';
+
+            // Extract and normalize genres
+            const genreNames = book.genres?.map((g: any) => g.name).join(', ') || '';
+            const normalizedGenres = normalizeGenres(genreNames, 3);
 
             return {
-              title: volumeInfo.title || '',
-              author: (volumeInfo.authors || []).join(', '),
+              title: book.title || '',
+              author: authors.join(', '),
               isbn,
-              genre: (volumeInfo.categories || []).join(', '),
-              description: volumeInfo.description || '',
-              coverUrl,
-              publisher: volumeInfo.publisher || '',
-              publishedDate: volumeInfo.publishedDate || '',
-              totalPages: volumeInfo.pageCount || null,
+              genre: normalizedGenres || '',
+              description: book.description || '',
+              coverUrl: book.image || '',
+              publisher: edition?.publisher_name || '',
+              publishedDate: book.release_date || '',
+              totalPages: book.pages || null,
             };
           });
         }
       }
-    } catch (googleError) {
-      console.error('Google Books failed:', googleError);
-    }
-
-    // If Google Books didn't return results, try Open Library
-    if (books.length === 0) {
-      try {
-        const openLibUrl = `https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=10`;
-        const openLibResponse = await fetch(openLibUrl);
-
-        if (openLibResponse.ok) {
-          const openLibData = await openLibResponse.json();
-
-          if (openLibData.docs) {
-            books = openLibData.docs.map((doc: any) => ({
-              title: doc.title || '',
-              author: doc.author_name?.join(', ') || '',
-              isbn: doc.isbn?.[0] || '',
-              genre: doc.subject?.slice(0, 2).join(', ') || '',
-              description: doc.first_sentence?.join(' ') || '',
-              coverUrl: doc.cover_i
-                ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg`
-                : '',
-              publisher: doc.publisher?.[0] || '',
-              publishedDate: doc.first_publish_year?.toString() || '',
-              totalPages: doc.number_of_pages_median || doc.number_of_pages || null,
-            }));
-          }
-        }
-      } catch (openLibError) {
-        console.error('Open Library failed:', openLibError);
-      }
+    } catch (hardcoverError) {
+      console.error('Hardcover search failed:', hardcoverError);
     }
 
     return NextResponse.json({ books, total: books.length });
