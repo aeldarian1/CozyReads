@@ -6,6 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { ModernNavigation } from '@/components/ModernNavigation';
 import { ModernDashboard } from '@/components/ModernDashboard';
 import { ModernBookGrid } from '@/components/ModernBookGrid';
+import { QuickFilterTabs } from '@/components/QuickFilterTabs';
 import { BookGrid } from '@/components/BookGrid';
 import { BookshelfView } from '@/components/BookshelfView';
 import { ViewToggle, ViewMode } from '@/components/ViewToggle';
@@ -495,6 +496,14 @@ export default function Home() {
     };
   }, [books]);
 
+  // Calculate counts for QuickFilterTabs
+  const filterCounts = useMemo(() => ({
+    all: books.length,
+    wantToRead: books.filter(b => b.readingStatus === 'Want to Read').length,
+    currentlyReading: currentlyReading.length,
+    finished: books.filter(b => b.readingStatus === 'Finished').length,
+  }), [books, currentlyReading]);
+
   return (
     <div className="min-h-screen">
       {/* Modern Navigation */}
@@ -510,6 +519,13 @@ export default function Home() {
           <ModernDashboard
             currentlyReading={currentlyReading}
             stats={stats}
+          />
+
+          {/* Quick Filter Tabs */}
+          <QuickFilterTabs
+            currentFilter={filters.statusFilter}
+            onFilterChange={(status) => setFilters({ ...filters, statusFilter: status })}
+            counts={filterCounts}
           />
 
         {/* Advanced Search */}
