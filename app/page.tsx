@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Fuse from 'fuse.js';
+import { UserButton } from '@clerk/nextjs';
 import { useTheme } from '@/contexts/ThemeContext';
 import { BookGrid } from '@/components/BookGrid';
 import { StatsCards } from '@/components/StatsCards';
@@ -356,6 +357,15 @@ export default function Home() {
                   }}
                 />
               </button>
+              <div className="scale-110">
+                <UserButton
+                  appearance={{
+                    elements: {
+                      avatarBox: 'w-11 h-11 ring-2 ring-white/30 hover:ring-amber-300/50 transition-all',
+                    },
+                  }}
+                />
+              </div>
               <button
                 onClick={handleAddBook}
               className="px-7 py-3.5 rounded-xl font-bold transition-all duration-300 hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"

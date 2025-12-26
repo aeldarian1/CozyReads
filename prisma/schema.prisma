@@ -10,8 +10,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id          String       @id @default(uuid())
+  clerkId     String       @unique
+  email       String       @unique
+  firstName   String?
+  lastName    String?
+  imageUrl    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  books       Book[]
+  collections Collection[]
+
+  @@index([clerkId])
+  @@index([email])
+}
+
 model Book {
   id            String   @id @default(uuid())
+  userId        String
   title         String
   author        String
   isbn          String?
@@ -28,8 +46,10 @@ model Book {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   collections   BookCollection[]
 
+  @@index([userId])
   @@index([title])
   @@index([author])
   @@index([readingStatus])
@@ -37,14 +57,19 @@ model Book {
 
 model Collection {
   id          String   @id @default(uuid())
-  name        String   @unique
+  userId      String
+  name        String
   description String?
   color       String   @default("#8b6f47") // Hex color for the collection
   icon        String   @default("📚") // Emoji icon
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   books       BookCollection[]
+
+  @@unique([userId, name])
+  @@index([userId])
 }
 
 model BookCollection {

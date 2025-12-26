@@ -12,6 +12,7 @@
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.36.5",
     "@prisma/client": "^6.2.1",
     "fuse.js": "^7.1.0",
     "next": "^16.1.1",

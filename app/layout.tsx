@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Merriweather, Playfair_Display, Open_Sans } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import "./globals.css";
 
@@ -32,12 +33,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${merriweather.variable} ${playfair.variable} ${openSans.variable}`}>
-      <body className="antialiased">
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en" className={`${merriweather.variable} ${playfair.variable} ${openSans.variable}`}>
+        <body className="antialiased">
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

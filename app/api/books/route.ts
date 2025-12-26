@@ -1,15 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+
+// Helper function to get or create user
+async function getOrCreateUser(clerkUser: any) {
+  let user = await prisma.user.findUnique({
+    where: { clerkId: clerkUser.id },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        clerkId: clerkUser.id,
+        email: clerkUser.emailAddresses[0]?.emailAddress || '',
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        imageUrl: clerkUser.imageUrl,
+      },
+    });
+  }
+
+  return user;
+}
 
 // GET all books with optional filters
 export async function GET(request: NextRequest) {
   try {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await getOrCreateUser(clerkUser);
+
     const searchParams = request.nextUrl.searchParams;
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
     const rating = searchParams.get('rating') || '';
 
-    const where: any = {};
+    const where: any = { userId: user.id };
 
     if (search) {
       where.OR = [
@@ -52,6 +86,18 @@ export async function GET(request: NextRequest) {
 // POST - Create a new book
 export async function POST(request: NextRequest) {
   try {
+    const { userId: clerkUserId } = await auth();
+    if (!clerkUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const user = await getOrCreateUser(clerkUser);
+
     const body = await request.json();
     const {
       title,
@@ -74,6 +120,7 @@ export async function POST(request: NextRequest) {
 
     const book = await prisma.book.create({
       data: {
+        userId: user.id,
         title,
         author,
         isbn: isbn || null,
