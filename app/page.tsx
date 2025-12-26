@@ -13,6 +13,7 @@ import { AddBookModal } from '@/components/AddBookModal';
 import { ViewBookModal } from '@/components/ViewBookModal';
 import { ReadingGoal } from '@/components/ReadingGoal';
 import { ReadingStreak } from '@/components/ReadingStreak';
+import { ReadingSpeed } from '@/components/ReadingSpeed';
 import { Analytics } from '@/components/Analytics';
 import { QuickEditMenu } from '@/components/QuickEditMenu';
 import { CollectionsManager } from '@/components/CollectionsManager';
@@ -695,6 +696,9 @@ export default function Home() {
 
         {/* Reading Streak */}
         <ReadingStreak />
+
+        {/* Reading Speed */}
+        <ReadingSpeed />
 
         {/* Analytics Dashboard */}
         {books.length > 0 && <Analytics books={books} />}
