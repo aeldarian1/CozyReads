@@ -536,10 +536,27 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
     if (isbn) {
       const cleanISBN = isbn.replace(/[-\s]/g, '');
       searchStrategies.push(cleanISBN);
+      // Try both ISBN-13 and ISBN-10 variants
+      const isbnVariants = getISBNVariants(cleanISBN);
+      isbnVariants.forEach(variant => {
+        if (variant !== cleanISBN) {
+          searchStrategies.push(variant);
+        }
+      });
     }
 
+    // Remove series info from title (content in parentheses)
+    const titleWithoutSeries = title.replace(/\s*\([^)]*\)\s*/g, '').trim();
+
+    // Try title variations
     searchStrategies.push(`${title} ${author}`);
+    if (titleWithoutSeries !== title) {
+      searchStrategies.push(`${titleWithoutSeries} ${author}`);
+    }
     searchStrategies.push(title);
+    if (titleWithoutSeries !== title) {
+      searchStrategies.push(titleWithoutSeries);
+    }
 
     for (const searchQuery of searchStrategies) {
       try {
