@@ -40,11 +40,18 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:flex-col fixed left-0 top-0 h-screen w-64 z-40 shadow-2xl"
+      {/* Desktop Sidebar with Glassmorphism */}
+      <aside className="hidden lg:flex lg:flex-col fixed left-0 top-0 h-screen w-64 z-40 shadow-2xl backdrop-blur-xl"
         style={{
-          background: 'var(--bg-secondary)',
-          borderRight: '1px solid var(--border-color)',
+          background: theme === 'dark'
+            ? 'rgba(37, 35, 33, 0.85)'
+            : 'rgba(255, 255, 255, 0.85)',
+          borderRight: theme === 'dark'
+            ? '1px solid rgba(212, 165, 116, 0.2)'
+            : '1px solid rgba(139, 111, 71, 0.2)',
+          boxShadow: theme === 'dark'
+            ? '0 8px 32px 0 rgba(0, 0, 0, 0.37)'
+            : '0 8px 32px 0 rgba(139, 111, 71, 0.15)',
         }}
       >
         {/* Logo */}
@@ -197,12 +204,19 @@ export function ModernNavigation({ onAddBook, onImport }: ModernNavigationProps)
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu with Glassmorphism */}
         {isMobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 p-4 shadow-xl animate-fadeIn"
+          <div className="absolute top-full left-0 right-0 p-4 shadow-xl animate-fadeIn backdrop-blur-xl"
             style={{
-              background: 'var(--bg-secondary)',
-              borderTop: '1px solid var(--border-color)',
+              background: theme === 'dark'
+                ? 'rgba(37, 35, 33, 0.95)'
+                : 'rgba(255, 255, 255, 0.95)',
+              borderTop: theme === 'dark'
+                ? '1px solid rgba(212, 165, 116, 0.3)'
+                : '1px solid rgba(139, 111, 71, 0.3)',
+              boxShadow: theme === 'dark'
+                ? '0 8px 32px 0 rgba(0, 0, 0, 0.5)'
+                : '0 8px 32px 0 rgba(139, 111, 71, 0.2)',
             }}
           >
             <nav className="space-y-2">
