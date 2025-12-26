@@ -196,9 +196,80 @@ h1, h2, h3, h4, h5, h6 {
   .group:hover > * {
     transform: none !important;
   }
-  
+
   /* Better tap highlight */
   * {
     -webkit-tap-highlight-color: rgba(201, 169, 97, 0.2);
+  }
+}
+
+/* Virtual Bookshelf Styles */
+.bookshelf-view {
+  min-height: 600px;
+}
+
+.shelf {
+  position: relative;
+}
+
+.shelf-container {
+  position: relative;
+}
+
+.book-spine {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  will-change: transform;
+}
+
+.book-spine:hover {
+  transform: translateX(-4px);
+  z-index: 10;
+}
+
+/* Hide scrollbar for horizontal book scrolling but keep functionality */
+.shelf .overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: var(--warm-brown) transparent;
+}
+
+.shelf .overflow-x-auto::-webkit-scrollbar {
+  height: 6px;
+}
+
+.shelf .overflow-x-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.shelf .overflow-x-auto::-webkit-scrollbar-thumb {
+  background: var(--warm-brown);
+  border-radius: 3px;
+}
+
+/* Wooden texture effect for shelves */
+.shelf-surface {
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+}
+
+/* Responsive adjustments for bookshelf */
+@media (max-width: 640px) {
+  .book-spine {
+    width: 30px !important;
+  }
+
+  .bookshelf-view {
+    padding: 1rem !important;
+  }
+}
+
+@media (min-width: 641px) and (max-width: 1024px) {
+  .book-spine {
+    width: 35px !important;
   }
 }

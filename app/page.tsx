@@ -5,6 +5,8 @@ import Fuse from 'fuse.js';
 import { UserButton } from '@clerk/nextjs';
 import { useTheme } from '@/contexts/ThemeContext';
 import { BookGrid } from '@/components/BookGrid';
+import { BookshelfView } from '@/components/BookshelfView';
+import { ViewToggle, ViewMode } from '@/components/ViewToggle';
 import { StatsCards } from '@/components/StatsCards';
 import { AdvancedSearch, AdvancedFilters } from '@/components/AdvancedSearch';
 import { AddBookModal } from '@/components/AddBookModal';
@@ -53,10 +55,25 @@ export default function Home() {
   const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [sortBy, setSortBy] = useState('dateAdded');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [quickEditMenu, setQuickEditMenu] = useState<{
     book: Book;
     position: { x: number; y: number };
   } | null>(null);
+
+  // Load view mode preference from localStorage
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem('cozyreads-view-mode');
+    if (savedViewMode === 'grid' || savedViewMode === 'bookshelf') {
+      setViewMode(savedViewMode);
+    }
+  }, []);
+
+  // Save view mode preference to localStorage
+  const handleViewChange = (newView: ViewMode) => {
+    setViewMode(newView);
+    localStorage.setItem('cozyreads-view-mode', newView);
+  };
 
   const [filters, setFilters] = useState<AdvancedFilters>({
     searchQuery: '',
@@ -592,40 +609,54 @@ export default function Home() {
           availableCollections={collections}
         />
 
-        {/* Sort Dropdown */}
-        <div className="mb-6 flex justify-end">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl" style={{
+        {/* View Toggle and Sort */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl flex-wrap" style={{
             background: 'var(--gradient-card)',
             border: '2px solid var(--border-color)'
           }}>
-            <span className="text-sm font-bold" style={{ color: 'var(--text-dark)' }}>Sort by:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-1 rounded-lg border-2 font-semibold"
-              style={{
-                borderColor: 'var(--border-color)',
-                background: 'var(--bg-secondary)',
-                color: 'var(--text-dark)'
-              }}
-            >
-              <option value="dateAdded">📅 Date Added</option>
-              <option value="title">🔤 Title</option>
-              <option value="author">✍️ Author</option>
-              <option value="rating">⭐ Rating</option>
-              <option value="dateFinished">✓ Date Finished</option>
-            </select>
+            {/* View Toggle */}
+            <ViewToggle currentView={viewMode} onViewChange={handleViewChange} />
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-bold" style={{ color: 'var(--text-dark)' }}>Sort by:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="px-3 py-1 rounded-lg border-2 font-semibold"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-dark)'
+                }}
+              >
+                <option value="dateAdded">📅 Date Added</option>
+                <option value="title">🔤 Title</option>
+                <option value="author">✍️ Author</option>
+                <option value="rating">⭐ Rating</option>
+                <option value="dateFinished">✓ Date Finished</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        {/* Books Grid */}
-        <BookGrid
-          books={filteredBooks}
-          onBookClick={handleViewBook}
-          onBookRightClick={handleBookRightClick}
-          selectedBookIds={selectedBookIds}
-          onBookSelect={toggleBookSelection}
-        />
+        {/* Books Display - Grid or Bookshelf View */}
+        {viewMode === 'grid' ? (
+          <BookGrid
+            books={filteredBooks}
+            onBookClick={handleViewBook}
+            onBookRightClick={handleBookRightClick}
+            selectedBookIds={selectedBookIds}
+            onBookSelect={toggleBookSelection}
+          />
+        ) : (
+          <BookshelfView
+            books={filteredBooks}
+            onBookClick={handleViewBook}
+            searchQuery={filters.searchQuery}
+          />
+        )}
       </div>
 
       {/* Modals */}
