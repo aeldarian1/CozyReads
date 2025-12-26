@@ -20,19 +20,29 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
   };
 
   try {
-    // Fetch from all sources in parallel for better performance
-    const [googleResult, openLibraryResult, worldCatResult, hardcoverResult] = await Promise.allSettled([
-      fetchFromGoogleBooks(isbn, title, author),
-      fetchFromOpenLibrary(isbn, title, author),
-      fetchFromWorldCat(isbn, title, author),
-      fetchFromHardcover(isbn, title, author)
-    ]);
+    // Try Hardcover first (fastest, best quality for modern books)
+    const hardcover = await fetchFromHardcover(isbn, title, author);
 
-    // Merge results from all sources
-    const google = googleResult.status === 'fulfilled' ? googleResult.value : null;
-    const openLib = openLibraryResult.status === 'fulfilled' ? openLibraryResult.value : null;
-    const worldCat = worldCatResult.status === 'fulfilled' ? worldCatResult.value : null;
-    const hardcover = hardcoverResult.status === 'fulfilled' ? hardcoverResult.value : null;
+    // If Hardcover found the book with good data, use it and skip other sources
+    const hardcoverFoundBook = hardcover && (hardcover.coverUrl || hardcover.description);
+
+    let google = null;
+    let openLib = null;
+    let worldCat = null;
+
+    // Only query other sources if Hardcover didn't find the book
+    if (!hardcoverFoundBook) {
+      // Fallback to other sources in parallel
+      const [googleResult, openLibraryResult, worldCatResult] = await Promise.allSettled([
+        fetchFromGoogleBooks(isbn, title, author),
+        fetchFromOpenLibrary(isbn, title, author),
+        fetchFromWorldCat(isbn, title, author)
+      ]);
+
+      google = googleResult.status === 'fulfilled' ? googleResult.value : null;
+      openLib = openLibraryResult.status === 'fulfilled' ? openLibraryResult.value : null;
+      worldCat = worldCatResult.status === 'fulfilled' ? worldCatResult.value : null;
+    }
 
     // Cover URL: Prefer Hardcover for highest quality, fallback to Google Books
     result.coverUrl = hardcover?.coverUrl || google?.coverUrl || openLib?.coverUrl || worldCat?.coverUrl || null;
