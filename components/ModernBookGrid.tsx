@@ -5,9 +5,11 @@ import { BookOpen } from 'lucide-react';
 interface ModernBookGridProps {
   books: Book[];
   onBookClick: (book: Book) => void;
+  onBookUpdate?: (bookId: string, updates: Partial<Book>) => void;
+  onAddToCollection?: (bookId: string) => void;
 }
 
-export function ModernBookGrid({ books, onBookClick }: ModernBookGridProps) {
+export function ModernBookGrid({ books, onBookClick, onBookUpdate, onAddToCollection }: ModernBookGridProps) {
   if (books.length === 0) {
     return (
       <div className="text-center py-20 px-4 rounded-2xl" style={{
@@ -40,6 +42,8 @@ export function ModernBookGrid({ books, onBookClick }: ModernBookGridProps) {
           key={book.id}
           book={book}
           onClick={() => onBookClick(book)}
+          onUpdate={(updates) => onBookUpdate?.(book.id, updates)}
+          onAddToCollection={onAddToCollection}
         />
       ))}
     </div>

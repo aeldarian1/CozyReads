@@ -572,6 +572,11 @@ export default function Home() {
           <ModernBookGrid
             books={filteredBooks}
             onBookClick={handleViewBook}
+            onBookUpdate={handleQuickUpdate}
+            onAddToCollection={(bookId) => {
+              // TODO: Show collection selection modal
+              alert('Add to collection feature - select collection modal will be implemented');
+            }}
           />
         ) : (
           <BookshelfView

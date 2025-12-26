@@ -3,15 +3,18 @@
 import { Book } from '@/lib/hooks/useBooks';
 import { useState } from 'react';
 import { BookOpen, Star } from 'lucide-react';
+import { QuickActions } from './QuickActions';
 
 interface ModernBookCardProps {
   book: Book;
   onClick?: () => void;
   onUpdate?: (updates: Partial<Book>) => void;
+  onAddToCollection?: (bookId: string) => void;
 }
 
-export function ModernBookCard({ book, onClick, onUpdate }: ModernBookCardProps) {
+export function ModernBookCard({ book, onClick, onUpdate, onAddToCollection }: ModernBookCardProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
 
   const statusColors = {
     'Want to Read': { bg: 'rgba(59, 130, 246, 0.1)', text: '#2563eb', border: '#3b82f6' },
@@ -20,6 +23,24 @@ export function ModernBookCard({ book, onClick, onUpdate }: ModernBookCardProps)
   };
 
   const status = statusColors[book.readingStatus as keyof typeof statusColors] || statusColors['Want to Read'];
+
+  const handleStatusChange = (newStatus: string) => {
+    if (onUpdate) {
+      onUpdate({ readingStatus: newStatus });
+    }
+  };
+
+  const handleRatingChange = (newRating: number) => {
+    if (onUpdate) {
+      onUpdate({ rating: newRating });
+    }
+  };
+
+  const handleAddToCollection = () => {
+    if (onAddToCollection) {
+      onAddToCollection(book.id);
+    }
+  };
 
   return (
     <div
@@ -145,22 +166,40 @@ export function ModernBookCard({ book, onClick, onUpdate }: ModernBookCardProps)
         )}
       </div>
 
-      {/* Hover Actions */}
+      {/* Quick Actions on Hover */}
       <div
-        className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100"
-      >
-        <button
-          className="px-6 py-3 rounded-xl font-bold text-white transform scale-90 group-hover:scale-100 transition-transform duration-300 shadow-2xl"
-          style={{
-            background: 'linear-gradient(135deg, var(--warm-brown), var(--gold))',
-          }}
-          onClick={(e) => {
-            e.stopPropagation();
+        className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100 p-4"
+        onClick={(e) => {
+          // Allow clicks on the overlay to open details
+          if (e.target === e.currentTarget) {
             onClick?.();
-          }}
-        >
-          View Details
-        </button>
+          }
+        }}
+      >
+        <div className="w-full" onClick={(e) => e.stopPropagation()}>
+          <QuickActions
+            bookId={book.id}
+            currentStatus={book.readingStatus}
+            currentRating={book.rating}
+            onStatusChange={handleStatusChange}
+            onRatingChange={handleRatingChange}
+            onAddToCollection={handleAddToCollection}
+          />
+
+          {/* View Details Button */}
+          <button
+            className="w-full mt-2 px-4 py-2 rounded-lg font-bold text-white transition-all hover:scale-105"
+            style={{
+              background: 'linear-gradient(135deg, var(--warm-brown), var(--gold))',
+            }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClick?.();
+            }}
+          >
+            View Full Details
+          </button>
+        </div>
       </div>
     </div>
   );
