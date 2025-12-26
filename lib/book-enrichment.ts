@@ -21,25 +21,28 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
 
   try {
     // Fetch from all sources in parallel for better performance
-    const [googleResult, openLibraryResult, worldCatResult] = await Promise.allSettled([
+    const [googleResult, openLibraryResult, worldCatResult, hardcoverResult] = await Promise.allSettled([
       fetchFromGoogleBooks(isbn, title, author),
       fetchFromOpenLibrary(isbn, title, author),
-      fetchFromWorldCat(isbn, title, author)
+      fetchFromWorldCat(isbn, title, author),
+      fetchFromHardcover(isbn, title, author)
     ]);
 
-    // Merge results, preferring Google Books for most fields
+    // Merge results from all sources
     const google = googleResult.status === 'fulfilled' ? googleResult.value : null;
     const openLib = openLibraryResult.status === 'fulfilled' ? openLibraryResult.value : null;
     const worldCat = worldCatResult.status === 'fulfilled' ? worldCatResult.value : null;
+    const hardcover = hardcoverResult.status === 'fulfilled' ? hardcoverResult.value : null;
 
-    // Cover URL: Prefer high-quality covers from any source
-    result.coverUrl = google?.coverUrl || openLib?.coverUrl || worldCat?.coverUrl || null;
+    // Cover URL: Prefer high-quality covers, Hardcover often has best quality
+    result.coverUrl = hardcover?.coverUrl || google?.coverUrl || openLib?.coverUrl || worldCat?.coverUrl || null;
 
     // Description: Prefer longer, more detailed descriptions
     const googleDesc = google?.description || '';
     const openLibDesc = openLib?.description || '';
     const worldCatDesc = worldCat?.description || '';
-    const descriptions = [googleDesc, openLibDesc, worldCatDesc].sort((a, b) => b.length - a.length);
+    const hardcoverDesc = hardcover?.description || '';
+    const descriptions = [googleDesc, openLibDesc, worldCatDesc, hardcoverDesc].sort((a, b) => b.length - a.length);
     result.description = descriptions[0] || null;
 
     // Genre: Combine unique genres from all sources
@@ -53,12 +56,15 @@ export async function enrichBookFromGoogleBooks(isbn: string | null, title: stri
     if (worldCat?.genre) {
       worldCat.genre.split(',').forEach(g => genres.add(g.trim()));
     }
+    if (hardcover?.genre) {
+      hardcover.genre.split(',').forEach(g => genres.add(g.trim()));
+    }
     result.genre = genres.size > 0 ? Array.from(genres).slice(0, 3).join(', ') : null;
 
-    // Additional metadata - prefer Google Books, fallback to others
-    result.publisher = google?.publisher || worldCat?.publisher || openLib?.publisher || null;
-    result.publishedDate = google?.publishedDate || worldCat?.publishedDate || openLib?.publishedDate || null;
-    result.pageCount = google?.pageCount || worldCat?.pageCount || openLib?.pageCount || null;
+    // Additional metadata - prefer Hardcover/Google Books, fallback to others
+    result.publisher = hardcover?.publisher || google?.publisher || worldCat?.publisher || openLib?.publisher || null;
+    result.publishedDate = hardcover?.publishedDate || google?.publishedDate || worldCat?.publishedDate || openLib?.publishedDate || null;
+    result.pageCount = hardcover?.pageCount || google?.pageCount || worldCat?.pageCount || openLib?.pageCount || null;
 
   } catch (error) {
     console.error('Error enriching book data:', error);
@@ -471,6 +477,121 @@ async function fetchFromWorldCat(isbn: string | null, title: string, author: str
     }
   } catch (error) {
     console.error('Error fetching from WorldCat:', error);
+  }
+
+  return result;
+}
+
+async function fetchFromHardcover(isbn: string | null, title: string, author: string) {
+  const result = {
+    coverUrl: null as string | null,
+    genre: null as string | null,
+    description: null as string | null,
+    publisher: null as string | null,
+    publishedDate: null as string | null,
+    pageCount: null as number | null,
+  };
+
+  try {
+    // Hardcover GraphQL API
+    const query = `
+      query SearchBooks($query: String!) {
+        books(where: { query: $query }, limit: 5) {
+          title
+          description
+          image
+          pages
+          release_date
+          contributions {
+            author {
+              name
+            }
+          }
+          editions {
+            isbn_10
+            isbn_13
+          }
+          book_series {
+            series {
+              name
+            }
+          }
+        }
+      }
+    `;
+
+    // Try different search strategies
+    const searchStrategies = [];
+
+    if (isbn) {
+      const cleanISBN = isbn.replace(/[-\s]/g, '');
+      searchStrategies.push(cleanISBN);
+    }
+
+    searchStrategies.push(`${title} ${author}`);
+    searchStrategies.push(title);
+
+    for (const searchQuery of searchStrategies) {
+      try {
+        const response = await fetch('https://hardcover.app/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query,
+            variables: { query: searchQuery },
+          }),
+        });
+
+        if (!response.ok) continue;
+
+        const data = await response.json();
+
+        if (!data.data?.books || data.data.books.length === 0) continue;
+
+        // Find best match
+        const book = data.data.books[0]; // Use first result for now
+
+        // Extract cover image
+        if (book.image) {
+          result.coverUrl = book.image;
+        }
+
+        // Extract description
+        if (book.description) {
+          result.description = book.description;
+        }
+
+        // Extract page count
+        if (book.pages && book.pages > 0) {
+          result.pageCount = book.pages;
+        }
+
+        // Extract published date
+        if (book.release_date) {
+          result.publishedDate = book.release_date;
+        }
+
+        // Extract genre from series if available
+        if (book.book_series && book.book_series.length > 0) {
+          const seriesNames = book.book_series.map((bs: any) => bs.series?.name).filter(Boolean);
+          if (seriesNames.length > 0) {
+            result.genre = seriesNames.slice(0, 3).join(', ');
+          }
+        }
+
+        // If we found good data, break
+        if (result.coverUrl || result.description) {
+          break;
+        }
+      } catch (error) {
+        // This strategy failed, try next one
+        continue;
+      }
+    }
+  } catch (error) {
+    console.error('Error fetching from Hardcover:', error);
   }
 
   return result;
