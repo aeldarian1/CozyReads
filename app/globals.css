@@ -513,3 +513,19 @@ select:focus-visible {
 .flip-card-back {
   transform: rotateY(180deg);
 }
+
+/* Page Transition Animations */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-transition {
+  animation: pageEnter 0.5s ease-out;
+}

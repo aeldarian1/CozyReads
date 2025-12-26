@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
 import { QueryProvider } from '@/components/QueryProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PageTransition } from '@/components/PageTransition';
 import "./globals.css";
 
 const merriweather = Merriweather({
@@ -48,7 +49,9 @@ export default function RootLayout({
             <QueryProvider>
               <ThemeProvider>
                 <ToastProvider>
-                  {children}
+                  <PageTransition>
+                    {children}
+                  </PageTransition>
                 </ToastProvider>
               </ThemeProvider>
             </QueryProvider>
