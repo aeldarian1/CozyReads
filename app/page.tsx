@@ -340,15 +340,15 @@ export default function Home() {
         <div className="absolute inset-0 opacity-10" style={{
           backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255, 255, 255, 0.03) 10px, rgba(255, 255, 255, 0.03) 20px)'
         }} />
-        <div className="container mx-auto px-6 py-6 relative z-10">
-          <div className="flex items-center justify-between">
-            <h1 className="text-4xl font-black text-amber-50 flex items-center gap-3 hover:gap-4 transition-all duration-300" style={{
+        <div className="container mx-auto px-3 sm:px-6 py-3 sm:py-6 relative z-10">
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-amber-50 flex items-center gap-1 sm:gap-2 md:gap-3 hover:gap-2 sm:hover:gap-3 md:hover:gap-4 transition-all duration-300" style={{
               fontFamily: 'Playfair Display, serif',
-              textShadow: '3px 3px 6px rgba(0,0,0,0.5), 0 0 20px rgba(201, 169, 97, 0.3)',
+              textShadow: '2px 2px 4px rgba(0,0,0,0.5), 0 0 15px rgba(201, 169, 97, 0.3)',
               letterSpacing: '0.02em'
             }}>
               <svg
-                className="w-11 h-11 text-amber-200 drop-shadow-lg animate-pulse"
+                className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 lg:w-11 lg:h-11 text-amber-200 drop-shadow-lg animate-pulse"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -361,12 +361,13 @@ export default function Home() {
                   d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                 />
               </svg>
-              CozyReads
+              <span className="hidden xs:inline sm:inline">CozyReads</span>
+              <span className="inline xs:hidden sm:hidden">Cozy</span>
             </h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 md:gap-3 lg:gap-4">
               <button
                 onClick={toggleTheme}
-                className="p-3 rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-xl shadow-md relative overflow-hidden group"
+                className="p-2 sm:p-2.5 md:p-3 rounded-lg sm:rounded-xl transition-all duration-300 hover:scale-110 hover:shadow-xl shadow-md relative overflow-hidden group"
                 style={{
                   background: 'linear-gradient(135deg, rgba(201, 169, 97, 0.2) 0%, rgba(212, 165, 116, 0.3) 100%)',
                   border: '2px solid rgba(255, 255, 255, 0.3)',
@@ -374,7 +375,7 @@ export default function Home() {
                 }}
                 title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
               >
-                <span className="relative z-10 text-2xl">
+                <span className="relative z-10 text-lg sm:text-xl md:text-2xl">
                   {theme === 'light' ? '🌙' : '☀️'}
                 </span>
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -383,18 +384,18 @@ export default function Home() {
                   }}
                 />
               </button>
-              <div className="scale-110">
+              <div className="scale-90 sm:scale-100 md:scale-110">
                 <UserButton
                   appearance={{
                     elements: {
-                      avatarBox: 'w-11 h-11 ring-2 ring-white/30 hover:ring-amber-300/50 transition-all',
+                      avatarBox: 'w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 ring-2 ring-white/30 hover:ring-amber-300/50 transition-all',
                     },
                   }}
                 />
               </div>
               <button
                 onClick={handleAddBook}
-              className="px-7 py-3.5 rounded-xl font-bold transition-all duration-300 hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
+              className="px-3 py-2 sm:px-5 sm:py-3 md:px-7 md:py-3.5 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
               style={{
                 background: 'var(--gradient-accent)',
                 color: theme === 'dark' ? '#1a1816' : '#2d1f15',
@@ -403,9 +404,10 @@ export default function Home() {
                 textShadow: '0 1px 2px rgba(255, 255, 255, 0.5)'
               }}
             >
-              <span className="relative z-10 flex items-center gap-2">
-                <span className="text-lg">📚</span>
-                Add New Book
+              <span className="relative z-10 flex items-center gap-1 sm:gap-2">
+                <span className="text-base sm:text-lg">📚</span>
+                <span className="hidden sm:inline">Add New Book</span>
+                <span className="inline sm:hidden">Add</span>
               </span>
               <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                 style={{
@@ -418,7 +420,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
         {/* Stats */}
         <StatsCards books={books} />
 
