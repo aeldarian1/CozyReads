@@ -527,6 +527,27 @@ export default function Home() {
                 }}
               />
               <button
+                onClick={() => window.location.href = '/goals'}
+                className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
+                style={{
+                  background: 'linear-gradient(135deg, #c9a961 0%, #d4a574 100%)',
+                  color: '#2d1f15',
+                  boxShadow: '0 6px 20px rgba(201, 169, 97, 0.4)',
+                  border: '2px solid rgba(255, 255, 255, 0.2)',
+                }}
+              >
+                <span className="relative z-10 flex items-center gap-1 sm:gap-2">
+                  <span className="text-base sm:text-lg">🎯</span>
+                  <span className="hidden lg:inline">Goals</span>
+                  <span className="inline lg:hidden">🎯</span>
+                </span>
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: 'linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%)'
+                  }}
+                />
+              </button>
+              <button
                 onClick={() => window.location.href = '/series'}
                 className="h-10 sm:h-11 md:h-12 px-3 sm:px-4 md:px-6 rounded-lg sm:rounded-xl text-sm sm:text-base font-bold transition-all duration-300 hover:scale-105 sm:hover:scale-110 hover:shadow-2xl shadow-xl relative overflow-hidden group"
                 style={{
