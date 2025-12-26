@@ -7,6 +7,26 @@
 // AUTHOR STANDARDIZATION
 // ============================================================================
 
+// Common author name abbreviations and their full forms
+const AUTHOR_NAME_EXPANSIONS: Record<string, string> = {
+  'alex.': 'Alexandre',
+  'alex': 'Alexandre',
+  'thos.': 'Thomas',
+  'thos': 'Thomas',
+  'wm.': 'William',
+  'wm': 'William',
+  'chas.': 'Charles',
+  'chas': 'Charles',
+  'robt.': 'Robert',
+  'robt': 'Robert',
+  'geo.': 'George',
+  'geo': 'George',
+  'edw.': 'Edward',
+  'edw': 'Edward',
+  'fran.': 'Francis',
+  'fran': 'Francis',
+};
+
 /**
  * Standardizes author name to "FirstName LastName" format
  */
@@ -28,20 +48,32 @@ export function standardizeAuthor(author: string | null | undefined): string {
     }
   }
 
+  // Fix "Alex. Re Dumas" → "Alexandre Dumas" type issues
+  // Remove errant "Re" that appears after abbreviated first names
+  cleaned = cleaned.replace(/\b(Alex\.|Thos\.|Wm\.|Chas\.|Robt\.|Geo\.|Edw\.|Fran\.)\s+Re\s+/gi, '$1 ');
+
   // Normalize spacing around initials (J.K. vs J. K. vs JK)
   cleaned = cleaned.replace(/\b([A-Z])\.?\s*([A-Z])\.?\b/g, '$1.$2.');
 
   // Fix multiple spaces
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
 
-  // Title case for each part
+  // Title case and expand abbreviations for each part
   cleaned = cleaned
     .split(' ')
-    .map(word => {
+    .map((word, index) => {
       // Keep initials uppercase (J.K.)
       if (/^[A-Z]\.?$/.test(word) || /^[A-Z]\.[A-Z]\.?$/.test(word)) {
         return word;
       }
+
+      const lowerWord = word.toLowerCase();
+
+      // Expand common abbreviations (only for first names, not last names)
+      if (index === 0 && AUTHOR_NAME_EXPANSIONS[lowerWord]) {
+        return AUTHOR_NAME_EXPANSIONS[lowerWord];
+      }
+
       // Title case regular words
       return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
     })
