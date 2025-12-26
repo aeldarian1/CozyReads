@@ -57,6 +57,8 @@ export function ImportGoodreadsModal({
   const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set());
   const [selectedBookForVerification, setSelectedBookForVerification] = useState<ImportResult['needsVerification'][0] | null>(null);
   const [verifiedBooks, setVerifiedBooks] = useState<Set<string>>(new Set());
+  const [selectedBookForPreview, setSelectedBookForPreview] = useState<{ book: ParsedBook; index: number } | null>(null);
+  const [manuallySelectedBooks, setManuallySelectedBooks] = useState<Map<number, any>>(new Map());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,6 +131,7 @@ export function ImportGoodreadsModal({
       formData.append('enrichFromGoogle', String(enrichFromGoogle));
       formData.append('fastMode', String(fastMode));
       formData.append('selectedIndices', JSON.stringify(Array.from(selectedBookIndices)));
+      formData.append('manuallySelectedBooks', JSON.stringify(Object.fromEntries(manuallySelectedBooks)));
 
       const response = await fetch('/api/import/goodreads', {
         method: 'POST',
@@ -212,6 +215,13 @@ export function ImportGoodreadsModal({
     setVerifiedBooks(prev => new Set([...prev, bookId]));
   };
 
+  const handlePreviewBookSelected = async (index: number, selectedData: any) => {
+    const newMap = new Map(manuallySelectedBooks);
+    newMap.set(index, selectedData);
+    setManuallySelectedBooks(newMap);
+    setSelectedBookForPreview(null);
+  };
+
   const resetModal = () => {
     setSelectedFile(null);
     setParsedBooks([]);
@@ -223,6 +233,8 @@ export function ImportGoodreadsModal({
     setExpandedErrors(new Set());
     setSelectedBookForVerification(null);
     setVerifiedBooks(new Set());
+    setSelectedBookForPreview(null);
+    setManuallySelectedBooks(new Map());
     setSkipDuplicates(true);
     setCreateCollections(true);
     setEnrichFromGoogle(true);
@@ -514,6 +526,14 @@ export function ImportGoodreadsModal({
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold truncate" style={{ color: 'var(--text-dark)' }}>
                           {book.title}
+                          {manuallySelectedBooks.has(idx) && (
+                            <span className="ml-2 text-xs px-2 py-0.5 rounded" style={{
+                              background: 'rgba(34, 197, 94, 0.2)',
+                              color: '#15803d',
+                            }}>
+                              ✓ Selected
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
                           by {book.author}
@@ -543,6 +563,20 @@ export function ImportGoodreadsModal({
                           </span>
                         </div>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedBookForPreview({ book, index: idx });
+                        }}
+                        className="px-3 py-1 rounded-lg text-xs font-semibold hover:scale-105 transition-transform flex-shrink-0"
+                        style={{
+                          background: manuallySelectedBooks.has(idx) ? 'rgba(34, 197, 94, 0.2)' : 'var(--warm-brown)',
+                          color: manuallySelectedBooks.has(idx) ? '#15803d' : '#ffffff',
+                          border: `1px solid ${manuallySelectedBooks.has(idx) ? '#15803d' : 'transparent'}`,
+                        }}
+                      >
+                        {manuallySelectedBooks.has(idx) ? '✓ Change' : '🔍 Search'}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -812,13 +846,29 @@ export function ImportGoodreadsModal({
         </div>
       </div>
 
-      {/* Manual Book Selection Modal */}
+      {/* Manual Book Selection Modal for Post-Import Verification */}
       {selectedBookForVerification && (
         <ManualBookSelectionModal
           isOpen={!!selectedBookForVerification}
           onClose={() => setSelectedBookForVerification(null)}
           book={selectedBookForVerification}
           onBookSelected={handleBookSelected}
+        />
+      )}
+
+      {/* Manual Book Selection Modal for Preview */}
+      {selectedBookForPreview && (
+        <ManualBookSelectionModal
+          isOpen={!!selectedBookForPreview}
+          onClose={() => setSelectedBookForPreview(null)}
+          book={{
+            bookId: '',
+            title: selectedBookForPreview.book.title,
+            author: selectedBookForPreview.book.author,
+            isbn: selectedBookForPreview.book.isbn,
+            reason: 'Manual selection',
+          }}
+          onBookSelected={(_, selectedData) => handlePreviewBookSelected(selectedBookForPreview.index, selectedData)}
         />
       )}
     </div>

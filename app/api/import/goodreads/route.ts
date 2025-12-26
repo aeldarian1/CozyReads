@@ -49,6 +49,7 @@ export async function POST(request: NextRequest) {
     const enrichFromGoogle = formData.get('enrichFromGoogle') === 'true';
     const fastMode = formData.get('fastMode') === 'true'; // Use fast Google Books enrichment
     const selectedIndicesStr = formData.get('selectedIndices') as string | null;
+    const manuallySelectedBooksStr = formData.get('manuallySelectedBooks') as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -99,15 +100,30 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 7. Filter by selected indices if provided
-    let booksToImport = books;
+    // 7. Parse manually selected books data
+    let manuallySelectedBooks: Record<string, any> = {};
+    if (manuallySelectedBooksStr) {
+      try {
+        manuallySelectedBooks = JSON.parse(manuallySelectedBooksStr);
+      } catch (e) {
+        console.error('Error parsing manuallySelectedBooks:', e);
+      }
+    }
+
+    // 8. Filter by selected indices and track original indices
+    let booksToImport: Array<{ book: any; originalIndex: number }> = [];
     if (selectedIndicesStr) {
       try {
         const selectedIndices = JSON.parse(selectedIndicesStr) as number[];
-        booksToImport = books.filter((_, index) => selectedIndices.includes(index));
+        booksToImport = books
+          .map((book, index) => ({ book, originalIndex: index }))
+          .filter(({ originalIndex }) => selectedIndices.includes(originalIndex));
       } catch (e) {
         console.error('Error parsing selectedIndices:', e);
+        booksToImport = books.map((book, index) => ({ book, originalIndex: index }));
       }
+    } else {
+      booksToImport = books.map((book, index) => ({ book, originalIndex: index }));
     }
 
     // 8. Stream import progress
@@ -128,21 +144,40 @@ export async function POST(request: NextRequest) {
             collectionsCreated: [] as string[],
           };
 
-          for (const book of booksToImport) {
+          for (const { book, originalIndex } of booksToImport) {
             processed++;
+
+            // Merge manually selected book data if available
+            let bookToImport = book;
+            if (manuallySelectedBooks[originalIndex]) {
+              const selectedData = manuallySelectedBooks[originalIndex];
+              const volumeInfo = selectedData.volumeInfo;
+
+              // Merge Google Books data with CSV data
+              bookToImport = {
+                ...book,
+                isbn: volumeInfo.industryIdentifiers?.[0]?.identifier || book.isbn,
+                description: volumeInfo.description || book.description,
+                coverUrl: volumeInfo.imageLinks?.thumbnail?.replace('http://', 'https://') || book.coverUrl,
+                genre: volumeInfo.categories?.join(', ') || book.genre,
+                publisher: volumeInfo.publisher || book.publisher,
+                publishedDate: volumeInfo.publishedDate || book.publishedDate,
+                totalPages: volumeInfo.pageCount || book.totalPages,
+              };
+            }
 
             // Send progress update
             const progressData = {
               type: 'progress',
               current: processed,
               total,
-              currentBook: book.title,
+              currentBook: bookToImport.title,
             };
             controller.enqueue(encoder.encode(JSON.stringify(progressData) + '\n'));
 
             // Import single book
             try {
-              const singleResult = await importGoodreadsBooks(user.id, [book], {
+              const singleResult = await importGoodreadsBooks(user.id, [bookToImport], {
                 skipDuplicates,
                 createCollections,
                 enrichFromGoogle,
@@ -165,7 +200,7 @@ export async function POST(request: NextRequest) {
               results.failed++;
               results.totalProcessed++;
               results.errors.push({
-                book: book.title,
+                book: bookToImport.title,
                 error: error instanceof Error ? error.message : 'Unknown error',
               });
             }
