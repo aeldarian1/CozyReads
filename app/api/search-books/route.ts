@@ -42,11 +42,19 @@ export async function GET(request: NextRequest) {
         }
       `;
 
-      const hardcoverResponse = await fetch('https://hardcover.app/graphql', {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add authentication token if available
+      const hardcoverToken = process.env.HARDCOVER_API_TOKEN;
+      if (hardcoverToken) {
+        headers['Authorization'] = `Bearer ${hardcoverToken}`;
+      }
+
+      const hardcoverResponse = await fetch('https://api.hardcover.app/v1/graphql', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           query: hardcoverQuery,
           variables: { query },
