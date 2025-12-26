@@ -17,7 +17,14 @@
       "Bash(vercel ls)",
       "Bash(npx tsc:*)",
       "Bash(vercel --prod:*)",
-      "Bash(node -e:*)"
+      "Bash(node -e:*)",
+      "Bash(vercel env add:*)",
+      "Bash(node test-search.js:*)",
+      "Bash(node test-comprehensive.js:*)",
+      "Bash(node test-detection-accuracy.js:*)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma db push)",
+      "Bash(git add:*)"
     ]
   }
 }

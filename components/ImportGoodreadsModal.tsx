@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { ManualBookSelectionModal } from './ManualBookSelectionModal';
+import { detectCSVFormat, type CSVFormat, type FormatDetectionResult, getFormatDescription } from '@/lib/csv-format-detector';
 
 interface ImportResult {
   totalProcessed: number;
@@ -44,6 +45,8 @@ export function ImportGoodreadsModal({
   onImportComplete: () => void;
 }) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [csvFormat, setCSVFormat] = useState<CSVFormat | null>(null);
+  const [formatDetection, setFormatDetection] = useState<FormatDetectionResult | null>(null);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [createCollections, setCreateCollections] = useState(true);
   const [enrichFromGoogle, setEnrichFromGoogle] = useState(true);
@@ -68,27 +71,38 @@ export function ImportGoodreadsModal({
       setError('');
       setImportResult(null);
 
-      // Parse CSV to show preview
+      // Detect CSV format
       try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('previewOnly', 'true');
+        const detection = await detectCSVFormat(file);
+        setFormatDetection(detection);
+        setCSVFormat(detection.format);
 
-        const response = await fetch('/api/import/goodreads', {
-          method: 'POST',
-          body: formData,
-        });
+        // If it's a Goodreads CSV, show preview with manual selection options
+        if (detection.format === 'goodreads') {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('previewOnly', 'true');
 
-        const data = await response.json();
+          const response = await fetch('/api/import/goodreads', {
+            method: 'POST',
+            body: formData,
+          });
 
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to parse CSV');
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || 'Failed to parse CSV');
+          }
+
+          setParsedBooks(data.books || []);
+          // Select all books by default
+          setSelectedBookIndices(new Set(data.books.map((_: any, idx: number) => idx)));
+          setCurrentStep('preview');
         }
-
-        setParsedBooks(data.books || []);
-        // Select all books by default
-        setSelectedBookIndices(new Set(data.books.map((_: any, idx: number) => idx)));
-        setCurrentStep('preview');
+        // For generic CSV, skip preview and go straight to options
+        else {
+          setCurrentStep('upload'); // Stay on upload screen with detected format shown
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to parse CSV');
       }
@@ -114,26 +128,40 @@ export function ImportGoodreadsModal({
   };
 
   const handleImport = async () => {
-    if (!selectedFile || selectedBookIndices.size === 0) {
+    if (!selectedFile) {
+      setError('Please select a file to import');
+      return;
+    }
+
+    // For Goodreads format with preview, check if books are selected
+    if (csvFormat === 'goodreads' && currentStep === 'preview' && selectedBookIndices.size === 0) {
       setError('Please select at least one book to import');
       return;
     }
 
     setCurrentStep('importing');
     setError('');
-    setProgress({ current: 0, total: selectedBookIndices.size, currentBook: '' });
+
+    // Set progress based on format
+    const totalBooks = csvFormat === 'goodreads' ? selectedBookIndices.size : 0;
+    setProgress({ current: 0, total: totalBooks, currentBook: '' });
 
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('skipDuplicates', String(skipDuplicates));
-      formData.append('createCollections', String(createCollections));
-      formData.append('enrichFromGoogle', String(enrichFromGoogle));
-      formData.append('fastMode', String(fastMode));
-      formData.append('selectedIndices', JSON.stringify(Array.from(selectedBookIndices)));
-      formData.append('manuallySelectedBooks', JSON.stringify(Object.fromEntries(manuallySelectedBooks)));
 
-      const response = await fetch('/api/import/goodreads', {
+      // Route to correct API based on format
+      if (csvFormat === 'goodreads') {
+        formData.append('skipDuplicates', String(skipDuplicates));
+        formData.append('createCollections', String(createCollections));
+        formData.append('enrichFromGoogle', String(enrichFromGoogle));
+        formData.append('fastMode', String(fastMode));
+        formData.append('selectedIndices', JSON.stringify(Array.from(selectedBookIndices)));
+        formData.append('manuallySelectedBooks', JSON.stringify(Object.fromEntries(manuallySelectedBooks)));
+      }
+
+      const apiEndpoint = csvFormat === 'goodreads' ? '/api/import/goodreads' : '/api/import/csv';
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         body: formData,
       });
@@ -224,6 +252,8 @@ export function ImportGoodreadsModal({
 
   const resetModal = () => {
     setSelectedFile(null);
+    setCSVFormat(null);
+    setFormatDetection(null);
     setParsedBooks([]);
     setSelectedBookIndices(new Set());
     setImportResult(null);
@@ -289,12 +319,14 @@ export function ImportGoodreadsModal({
             textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
           }}>
             <span className="text-4xl">📚</span>
-            Import from Goodreads
+            Import Books
           </h2>
           <p className="text-amber-100 mt-2 text-sm">
-            {currentStep === 'upload' && 'Import your reading library from a Goodreads CSV export'}
+            {currentStep === 'upload' && !formatDetection && 'Import your books from a CSV file'}
+            {currentStep === 'upload' && formatDetection && getFormatDescription(formatDetection)}
             {currentStep === 'preview' && `Found ${parsedBooks.length} books - select which ones to import`}
-            {currentStep === 'importing' && `Importing ${progress.current} of ${progress.total} books...`}
+            {currentStep === 'importing' && csvFormat === 'goodreads' && `Importing ${progress.current} of ${progress.total} books...`}
+            {currentStep === 'importing' && csvFormat === 'generic' && 'Importing your books...'}
             {currentStep === 'complete' && 'Import complete!'}
           </p>
 
