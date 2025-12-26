@@ -5,7 +5,7 @@ import Fuse from 'fuse.js';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ModernNavigation } from '@/components/ModernNavigation';
 import { ModernDashboard } from '@/components/ModernDashboard';
-import { ModernBookGrid } from '@/components/ModernBookGrid';
+import { VirtualizedBookGrid } from '@/components/VirtualizedBookGrid';
 import { QuickFilterTabs } from '@/components/QuickFilterTabs';
 import { BookGrid } from '@/components/BookGrid';
 import { BookshelfView } from '@/components/BookshelfView';
@@ -583,9 +583,9 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Books Display - Modern Grid or Bookshelf View */}
+        {/* Books Display - Virtualized Grid or Bookshelf View */}
         {viewMode === 'grid' ? (
-          <ModernBookGrid
+          <VirtualizedBookGrid
             books={filteredBooks}
             onBookClick={handleViewBook}
             onBookUpdate={handleQuickUpdate}
