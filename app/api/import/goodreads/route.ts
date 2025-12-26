@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File;
     const skipDuplicates = formData.get('skipDuplicates') === 'true';
     const createCollections = formData.get('createCollections') === 'true';
+    const enrichFromGoogle = formData.get('enrichFromGoogle') === 'true';
 
     if (!file) {
       return NextResponse.json(
@@ -89,6 +90,7 @@ export async function POST(request: NextRequest) {
     const importResult = await importGoodreadsBooks(user.id, books, {
       skipDuplicates,
       createCollections,
+      enrichFromGoogle,
     });
 
     // 7. Save import history

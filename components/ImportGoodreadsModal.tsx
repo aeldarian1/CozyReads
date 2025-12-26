@@ -23,6 +23,7 @@ export function ImportGoodreadsModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [createCollections, setCreateCollections] = useState(true);
+  const [enrichFromGoogle, setEnrichFromGoogle] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string>('');
@@ -51,6 +52,7 @@ export function ImportGoodreadsModal({
       formData.append('file', selectedFile);
       formData.append('skipDuplicates', String(skipDuplicates));
       formData.append('createCollections', String(createCollections));
+      formData.append('enrichFromGoogle', String(enrichFromGoogle));
 
       const response = await fetch('/api/import/goodreads', {
         method: 'POST',
@@ -78,6 +80,7 @@ export function ImportGoodreadsModal({
     setError('');
     setSkipDuplicates(true);
     setCreateCollections(true);
+    setEnrichFromGoogle(true);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -214,6 +217,25 @@ export function ImportGoodreadsModal({
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       Convert your Goodreads custom shelves into CozyReads collections
+                    </p>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all hover:bg-opacity-50" style={{
+                  background: 'var(--bg-tertiary)',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={enrichFromGoogle}
+                    onChange={(e) => setEnrichFromGoogle(e.target.checked)}
+                    className="w-5 h-5 rounded"
+                  />
+                  <div>
+                    <p className="font-semibold" style={{ color: 'var(--text-dark)' }}>
+                      Fetch covers & genres from Google Books
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      Automatically fetch missing book covers, genres, and descriptions (recommended)
                     </p>
                   </div>
                 </label>

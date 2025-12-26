@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { ParsedBook } from './csv-parser';
+import { enrichBookFromGoogleBooks } from './book-enrichment';
 
 export interface ImportResult {
   totalProcessed: number;
@@ -16,6 +17,7 @@ export async function importGoodreadsBooks(
   options: {
     skipDuplicates: boolean;
     createCollections: boolean;
+    enrichFromGoogle: boolean;
   }
 ): Promise<ImportResult> {
   const result: ImportResult = {
@@ -106,6 +108,26 @@ export async function importGoodreadsBooks(
             return;
           }
 
+          // Enrich book data from Google Books if enabled
+          let enrichedData = {
+            coverUrl: null as string | null,
+            genre: null as string | null,
+            description: null as string | null,
+          };
+
+          if (options.enrichFromGoogle) {
+            try {
+              enrichedData = await enrichBookFromGoogleBooks(
+                book.isbn,
+                book.title,
+                book.author
+              );
+            } catch (error) {
+              // Continue without enrichment if it fails
+              console.error(`Failed to enrich book: ${book.title}`, error);
+            }
+          }
+
           // Use transaction to ensure atomicity
           await prisma.$transaction(async (tx) => {
             // Create book
@@ -115,6 +137,9 @@ export async function importGoodreadsBooks(
                 title: book.title,
                 author: book.author,
                 isbn: book.isbn,
+                genre: enrichedData.genre || book.genre,
+                description: enrichedData.description,
+                coverUrl: enrichedData.coverUrl,
                 rating: book.rating,
                 review: book.review,
                 readingStatus: book.readingStatus,
