@@ -75,6 +75,12 @@ function isNonEnglishDescription(description: string): boolean {
     'lehrer',
     'über',
     'für',
+    'vorbereitung', // preparation
+    'helfer', // helper
+    'unterrichtsstunden', // lessons
+    'referate', // presentations
+    'abitur', // final exams
+    'bewährten', // proven
   ];
 
   const germanMatches = germanIndicators.filter(indicator =>
@@ -87,6 +93,105 @@ function isNonEnglishDescription(description: string): boolean {
   // Could add more language detection here (French, Spanish, etc.) if needed
 
   return false;
+}
+
+/**
+ * Smart algorithm to select the best cover URL from multiple sources
+ * Considers image quality, size, and source reliability
+ */
+function selectBestCover(covers: Array<{ url: string | null; source: string }>): string | null {
+  const validCovers = covers.filter(c => c.url && c.url.length > 0);
+  if (validCovers.length === 0) return null;
+
+  // Score each cover
+  const scored = validCovers.map(cover => {
+    let score = 0;
+
+    // Source reliability (Google Books is most reliable for covers)
+    if (cover.source === 'google') score += 40;
+    else if (cover.source === 'hardcover') score += 30;
+    else if (cover.source === 'worldcat') score += 20;
+    else if (cover.source === 'openlibrary') score += 10;
+
+    // URL quality indicators
+    const url = cover.url!.toLowerCase();
+
+    // Prefer HTTPS
+    if (url.startsWith('https://')) score += 10;
+
+    // Prefer larger images (look for size indicators in URL)
+    if (url.includes('large') || url.includes('zoom=1')) score += 15;
+    if (url.includes('medium')) score += 10;
+    if (url.includes('small') || url.includes('thumbnail')) score -= 5;
+
+    // Avoid placeholder/default images
+    if (url.includes('no-cover') || url.includes('default') || url.includes('placeholder')) score -= 50;
+
+    // Google Books specific quality indicators
+    if (cover.source === 'google' && url.includes('zoom=')) {
+      // Extract zoom level (higher is better)
+      const zoomMatch = url.match(/zoom=(\d)/);
+      if (zoomMatch) {
+        const zoomLevel = parseInt(zoomMatch[1]);
+        score += zoomLevel * 3;
+      }
+    }
+
+    return { ...cover, score };
+  });
+
+  // Sort by score and return best
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].url;
+}
+
+/**
+ * Smart algorithm to select the best description from multiple sources
+ * Considers length, quality, and language
+ */
+function selectBestDescription(descriptions: Array<{ text: string | null; source: string }>): string | null {
+  const validDescs = descriptions.filter(d => d.text && d.text.length >= 50);
+  if (validDescs.length === 0) return null;
+
+  // Score each description
+  const scored = validDescs.map(desc => {
+    let score = 0;
+    const text = desc.text!;
+
+    // Length score (longer is generally better, up to a point)
+    const length = text.length;
+    if (length >= 200 && length <= 1000) score += 30; // Sweet spot
+    else if (length > 1000 && length <= 2000) score += 25;
+    else if (length < 200) score += 10;
+
+    // Reject non-English descriptions
+    if (isNonEnglishDescription(text)) {
+      score -= 100;
+    }
+
+    // Source reliability for descriptions
+    if (desc.source === 'google') score += 25; // Google Books usually has good descriptions
+    else if (desc.source === 'hardcover') score += 20;
+    else if (desc.source === 'worldcat') score += 15;
+    else if (desc.source === 'openlibrary') score += 10;
+
+    // Quality indicators
+    if (text.includes('ISBN') || text.includes('copyright')) score -= 5; // Metadata pollution
+    if (text.match(/\d{3}-\d{3}/)) score -= 5; // Phone numbers/technical IDs
+
+    // Prefer descriptions that seem editorial
+    if (text.toLowerCase().includes('masterpiece') ||
+        text.toLowerCase().includes('acclaimed') ||
+        text.toLowerCase().includes('bestseller')) {
+      score += 5;
+    }
+
+    return { ...desc, score };
+  });
+
+  // Sort by score and return best
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].text;
 }
 
 /**
@@ -279,17 +384,23 @@ export async function enrichBookFromGoogleBooks(
       }
     }
 
-    // Cover URL: Prefer Google Books (most reliable/accurate), then Hardcover (higher quality)
-    // This prevents mismatched covers from Hardcover's sometimes inconsistent data
-    result.coverUrl = google?.coverUrl || hardcover?.coverUrl || openLib?.coverUrl || worldCat?.coverUrl || null;
+    // Smart cover selection: Score each source and pick the best quality
+    const coverCandidates = [
+      { url: google?.coverUrl || null, source: 'google' },
+      { url: hardcover?.coverUrl || null, source: 'hardcover' },
+      { url: worldCat?.coverUrl || null, source: 'worldcat' },
+      { url: openLib?.coverUrl || null, source: 'openlibrary' },
+    ];
+    result.coverUrl = selectBestCover(coverCandidates);
 
-    // Description: Always pick the longest (most detailed) from any source
-    const googleDesc = google?.description || '';
-    const openLibDesc = openLib?.description || '';
-    const worldCatDesc = worldCat?.description || '';
-    const hardcoverDesc = hardcover?.description || '';
-    const descriptions = [googleDesc, openLibDesc, worldCatDesc, hardcoverDesc].sort((a, b) => b.length - a.length);
-    result.description = descriptions[0] || null;
+    // Smart description selection: Score based on length, quality, and language
+    const descriptionCandidates = [
+      { text: google?.description || null, source: 'google' },
+      { text: hardcover?.description || null, source: 'hardcover' },
+      { text: worldCat?.description || null, source: 'worldcat' },
+      { text: openLib?.description || null, source: 'openlibrary' },
+    ];
+    result.description = selectBestDescription(descriptionCandidates);
 
     // Genre: Combine and normalize unique genres from all sources
     const genres = new Set<string>();
