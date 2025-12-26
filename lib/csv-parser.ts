@@ -95,6 +95,17 @@ export function mapGoodreadsToCozyReads(row: GoodreadsCSVRow): ParsedBook {
     'to-read': 'Want to Read',
   };
 
+  // Clean Excel text formatting (="value") used to preserve ISBNs as text
+  const cleanExcelText = (value: string): string => {
+    if (!value) return value;
+    const trimmed = value.trim();
+    // Check for Excel's text format: ="..."
+    if (trimmed.startsWith('="') && trimmed.endsWith('"')) {
+      return trimmed.slice(2, -1);
+    }
+    return trimmed;
+  };
+
   // Parse custom shelves (comma-separated)
   const shelves = row['Bookshelves']
     ? row['Bookshelves'].split(',').map(s => s.trim()).filter(Boolean)
@@ -111,10 +122,10 @@ export function mapGoodreadsToCozyReads(row: GoodreadsCSVRow): ParsedBook {
     }
   };
 
-  // Get ISBN (prefer ISBN13 over ISBN)
-  const isbn = row['ISBN13'] && row['ISBN13'].trim() !== ''
-    ? row['ISBN13']
-    : (row['ISBN'] && row['ISBN'].trim() !== '' ? row['ISBN'] : null);
+  // Get ISBN (prefer ISBN13 over ISBN) and clean Excel formatting
+  const isbn13 = row['ISBN13'] ? cleanExcelText(row['ISBN13']) : '';
+  const isbn10 = row['ISBN'] ? cleanExcelText(row['ISBN']) : '';
+  const isbn = isbn13 !== '' ? isbn13 : (isbn10 !== '' ? isbn10 : null);
 
   // Parse rating
   const rating = parseInt(row['My Rating']) || 0;
