@@ -545,17 +545,25 @@ async function fetchFromHardcover(isbn: string | null, title: string, author: st
       });
     }
 
-    // Remove series info from title (content in parentheses)
+    // Clean title variations
     const titleWithoutSeries = title.replace(/\s*\([^)]*\)\s*/g, '').trim();
+    const titleBeforeColon = title.split(':')[0].trim(); // "The Gifts of Imperfection: Long Subtitle" -> "The Gifts of Imperfection"
+    const titleBeforeColonNoSeries = titleBeforeColon.replace(/\s*\([^)]*\)\s*/g, '').trim();
 
-    // Try title variations
+    // Try title variations (most specific first)
     searchStrategies.push(`${title} ${author}`);
     if (titleWithoutSeries !== title) {
       searchStrategies.push(`${titleWithoutSeries} ${author}`);
     }
+    if (titleBeforeColon !== title) {
+      searchStrategies.push(`${titleBeforeColon} ${author}`);
+    }
+    if (titleBeforeColonNoSeries !== title && titleBeforeColonNoSeries !== titleBeforeColon) {
+      searchStrategies.push(`${titleBeforeColonNoSeries} ${author}`);
+    }
     searchStrategies.push(title);
-    if (titleWithoutSeries !== title) {
-      searchStrategies.push(titleWithoutSeries);
+    if (titleBeforeColon !== title) {
+      searchStrategies.push(titleBeforeColon);
     }
 
     for (const searchQuery of searchStrategies) {
