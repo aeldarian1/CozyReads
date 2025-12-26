@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { normalizeGenres } from '@/lib/genre-mapper';
+import { searchGoogleBooks } from '@/lib/google-books';
 
 /**
  * Calculate similarity between two strings (0-1 range)
@@ -63,7 +64,62 @@ function isRelevantResult(hit: any, searchQuery: string): boolean {
   return false;
 }
 
-// Book search API route using Hardcover
+/**
+ * Deduplicate books by ISBN and title similarity
+ * Prefers books with more complete data
+ */
+function deduplicateBooks(books: any[]): any[] {
+  const seen = new Map<string, any>();
+
+  for (const book of books) {
+    // Create a unique key based on ISBN or normalized title
+    const isbn = book.isbn?.replace(/[-\s]/g, '');
+    const normalizedTitle = book.title?.toLowerCase().replace(/[^\w\s]/g, '').trim();
+
+    let key = isbn || normalizedTitle;
+
+    if (!key) continue;
+
+    // If we haven't seen this book, add it
+    if (!seen.has(key)) {
+      seen.set(key, book);
+      continue;
+    }
+
+    // If we have seen it, keep the one with more complete data
+    const existing = seen.get(key);
+    const existingScore = scoreBookCompleteness(existing);
+    const newScore = scoreBookCompleteness(book);
+
+    if (newScore > existingScore) {
+      seen.set(key, book);
+    }
+  }
+
+  return Array.from(seen.values());
+}
+
+/**
+ * Score how complete a book's data is (higher = more complete)
+ */
+function scoreBookCompleteness(book: any): number {
+  let score = 0;
+
+  if (book.title) score += 1;
+  if (book.author) score += 1;
+  if (book.isbn) score += 2;
+  if (book.description && book.description.length > 50) score += 2;
+  if (book.coverUrl) score += 2;
+  if (book.genre) score += 1;
+  if (book.totalPages) score += 1;
+  if (book.publisher) score += 1;
+  if (book.publishedDate) score += 1;
+  if (book.series) score += 1;
+
+  return score;
+}
+
+// Book search API route using Hardcover + Google Books fallback
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
@@ -177,7 +233,40 @@ export async function GET(request: NextRequest) {
       console.error('Hardcover search failed:', hardcoverError);
     }
 
-    return NextResponse.json({ books, total: books.length });
+    // If Hardcover returned few results, supplement with Google Books
+    const shouldUseGoogleBooks = books.length < 5;
+
+    if (shouldUseGoogleBooks) {
+      console.log('Using Google Books as fallback (Hardcover returned < 5 results)');
+
+      try {
+        const googleBooks = await searchGoogleBooks(query, 10);
+
+        if (googleBooks.length > 0) {
+          console.log(`Google Books returned ${googleBooks.length} results`);
+
+          // Combine results
+          const allBooks = [...books, ...googleBooks];
+
+          // Deduplicate by ISBN and title
+          books = deduplicateBooks(allBooks);
+
+          console.log(`After deduplication: ${books.length} total results`);
+        }
+      } catch (googleError) {
+        console.error('Google Books search failed:', googleError);
+        // Continue with Hardcover results only
+      }
+    }
+
+    return NextResponse.json({
+      books,
+      total: books.length,
+      sources: {
+        hardcover: books.filter(b => !b.isbn || books.length === 0).length > 0,
+        googleBooks: shouldUseGoogleBooks
+      }
+    });
   } catch (error) {
     console.error('Error searching books:', error);
     return NextResponse.json(

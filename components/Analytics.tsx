@@ -75,17 +75,35 @@ export function Analytics({ books, onBooksUpdated }: { books: Book[]; onBooksUpd
       setIsStandardizing(false);
     }
   };
-  // Genre Distribution Data
+  // Genre Distribution Data - Split compound genres and count individually
   const genreData = books.reduce((acc: { [key: string]: number }, book) => {
-    const genre = book.genre || 'Uncategorized';
-    acc[genre] = (acc[genre] || 0) + 1;
+    const genreString = book.genre || 'Uncategorized';
+
+    // Split by comma and count each genre separately
+    const genres = genreString.split(',').map(g => g.trim());
+
+    genres.forEach(genre => {
+      if (genre) {
+        acc[genre] = (acc[genre] || 0) + 1;
+      }
+    });
+
     return acc;
   }, {});
 
-  const genreChartData = Object.entries(genreData).map(([name, value]) => ({
-    name,
-    value,
-  }));
+  // Sort by count and group small genres into "Other"
+  const sortedGenres = Object.entries(genreData).sort((a, b) => b[1] - a[1]);
+  const topGenresCount = 7; // Show top 7 genres
+  const topGenres = sortedGenres.slice(0, topGenresCount);
+  const otherGenres = sortedGenres.slice(topGenresCount);
+
+  const genreChartData = [
+    ...topGenres.map(([name, value]) => ({ name, value })),
+    ...(otherGenres.length > 0
+      ? [{ name: 'Other', value: otherGenres.reduce((sum, [, val]) => sum + val, 0) }]
+      : []
+    )
+  ];
 
   // Books per Month Data (last 12 months)
   const monthlyData: { [key: string]: number } = {};
@@ -130,7 +148,7 @@ export function Analytics({ books, onBooksUpdated }: { books: Book[]; onBooksUpd
   const totalPages = books.reduce((sum, b) => sum + (b.totalPages || 0), 0);
   const avgPages = books.length > 0 ? Math.round(totalPages / books.length) : 0;
 
-  const mostReadGenre = Object.entries(genreData).sort((a, b) => b[1] - a[1])[0]?.[0] || 'None';
+  const mostReadGenre = sortedGenres.filter(([name]) => name !== 'Uncategorized')[0]?.[0] || 'None';
 
   return (
     <div className="mb-8 space-y-6">
@@ -227,8 +245,12 @@ export function Analytics({ books, onBooksUpdated }: { books: Book[]; onBooksUpd
                 data={genreChartData}
                 cx="50%"
                 cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`}
+                labelLine={true}
+                label={({ name, percent }) => {
+                  const pct = ((percent ?? 0) * 100).toFixed(0);
+                  // Only show label if percentage is >= 5%
+                  return parseFloat(pct) >= 5 ? `${name}: ${pct}%` : '';
+                }}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -242,6 +264,15 @@ export function Analytics({ books, onBooksUpdated }: { books: Book[]; onBooksUpd
                   background: '#fdf8f3',
                   border: '1px solid rgba(139, 111, 71, 0.3)',
                   borderRadius: '8px',
+                }}
+                formatter={(value: number | undefined) => [`${value || 0} books`, 'Count']}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                wrapperStyle={{
+                  fontSize: '12px',
+                  paddingTop: '10px'
                 }}
               />
             </PieChart>
