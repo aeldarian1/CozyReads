@@ -1,31 +1,67 @@
 /**
  * Enriches book data by fetching missing information from Google Books API and Open Library
+ * Uses a smart merging strategy to get the best data from both sources
  */
 export async function enrichBookFromGoogleBooks(isbn: string | null, title: string, author: string): Promise<{
   coverUrl: string | null;
   genre: string | null;
   description: string | null;
+  publisher?: string | null;
+  publishedDate?: string | null;
+  pageCount?: number | null;
 }> {
   const result = {
     coverUrl: null as string | null,
     genre: null as string | null,
     description: null as string | null,
+    publisher: null as string | null,
+    publishedDate: null as string | null,
+    pageCount: null as number | null,
   };
 
   try {
-    // Try Google Books first
-    const googleResult = await fetchFromGoogleBooks(isbn, title, author);
-    if (googleResult.coverUrl || googleResult.genre || googleResult.description) {
-      return googleResult;
+    // Fetch from both sources in parallel for better performance
+    const [googleResult, openLibraryResult] = await Promise.allSettled([
+      fetchFromGoogleBooks(isbn, title, author),
+      fetchFromOpenLibrary(isbn, title, author)
+    ]);
+
+    // Merge results, preferring Google Books for most fields but OpenLibrary for covers
+    const google = googleResult.status === 'fulfilled' ? googleResult.value : null;
+    const openLib = openLibraryResult.status === 'fulfilled' ? openLibraryResult.value : null;
+
+    // Cover URL: Prefer high-quality Google Books covers, fallback to OpenLibrary
+    result.coverUrl = google?.coverUrl || openLib?.coverUrl || null;
+
+    // Description: Prefer longer, more detailed descriptions
+    const googleDesc = google?.description || '';
+    const openLibDesc = openLib?.description || '';
+    if (googleDesc.length > openLibDesc.length) {
+      result.description = googleDesc || null;
+    } else {
+      result.description = openLibDesc || googleDesc || null;
     }
 
-    // Fallback to Open Library if Google Books fails
-    const openLibraryResult = await fetchFromOpenLibrary(isbn, title, author);
-    return openLibraryResult;
+    // Genre: Combine unique genres from both sources
+    const genres = new Set<string>();
+    if (google?.genre) {
+      google.genre.split(',').forEach(g => genres.add(g.trim()));
+    }
+    if (openLib?.genre) {
+      openLib.genre.split(',').forEach(g => genres.add(g.trim()));
+    }
+    result.genre = genres.size > 0 ? Array.from(genres).slice(0, 3).join(', ') : null;
+
+    // Additional metadata from Google Books (usually more reliable for these fields)
+    result.publisher = google?.publisher || openLib?.publisher || null;
+    result.publishedDate = google?.publishedDate || openLib?.publishedDate || null;
+    result.pageCount = google?.pageCount || openLib?.pageCount || null;
+
   } catch (error) {
     console.error('Error enriching book data:', error);
-    return result;
   }
+
+  return result;
 }
 
 async function fetchFromGoogleBooks(isbn: string | null, title: string, author: string) {
@@ -33,52 +69,103 @@ async function fetchFromGoogleBooks(isbn: string | null, title: string, author: 
     coverUrl: null as string | null,
     genre: null as string | null,
     description: null as string | null,
+    publisher: null as string | null,
+    publishedDate: null as string | null,
+    pageCount: null as number | null,
   };
 
   try {
-    // Try ISBN first if available (most accurate)
-    let searchQuery = isbn ? `isbn:${isbn}` : `intitle:${title}+inauthor:${author}`;
+    // Normalize and clean ISBN (support both ISBN-10 and ISBN-13)
+    const cleanISBN = isbn ? isbn.replace(/[-\s]/g, '') : null;
 
-    const response = await fetch(
-      `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=3`
-    );
+    // Try multiple search strategies for better accuracy
+    const searchStrategies = [];
 
-    if (!response.ok) return result;
+    if (cleanISBN) {
+      // Strategy 1: ISBN search (most accurate)
+      searchStrategies.push(`isbn:${cleanISBN}`);
+    }
 
-    const data = await response.json();
+    // Strategy 2: Combined title and author search
+    const cleanTitle = title.trim();
+    const cleanAuthor = author.trim();
+    searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:"${cleanAuthor}"`);
 
-    if (!data.items || data.items.length === 0) return result;
+    // Strategy 3: Fallback without quotes
+    if (searchStrategies.length === 1) {
+      searchStrategies.push(`intitle:${cleanTitle}+inauthor:${cleanAuthor}`);
+    }
 
-    // Try to find the best match from multiple results
-    const book = findBestMatch(data.items, title, author);
-    const volumeInfo = book.volumeInfo;
+    // Try each strategy until we get results
+    for (const searchQuery of searchStrategies) {
+      try {
+        const response = await fetchWithRetry(
+          `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=5`
+        );
 
-    // Extract cover URL (prefer high quality)
-    if (volumeInfo.imageLinks) {
-      let coverUrl =
-        volumeInfo.imageLinks.extraLarge ||
-        volumeInfo.imageLinks.large ||
-        volumeInfo.imageLinks.medium ||
-        volumeInfo.imageLinks.thumbnail ||
-        volumeInfo.imageLinks.smallThumbnail;
+        if (!response.ok) continue;
 
-      // Upgrade to HTTPS and remove zoom parameter for better quality
-      if (coverUrl) {
-        coverUrl = coverUrl.replace('http://', 'https://');
-        coverUrl = coverUrl.replace('&zoom=1', '');
-        coverUrl = coverUrl.replace('&edge=curl', '');
-        result.coverUrl = coverUrl;
+        const data = await response.json();
+
+        if (!data.items || data.items.length === 0) continue;
+
+        // Find the best match from results
+        const book = findBestMatch(data.items, title, author);
+        const volumeInfo = book.volumeInfo;
+
+        // Extract cover URL (prefer high quality)
+        if (volumeInfo.imageLinks) {
+          let coverUrl =
+            volumeInfo.imageLinks.extraLarge ||
+            volumeInfo.imageLinks.large ||
+            volumeInfo.imageLinks.medium ||
+            volumeInfo.imageLinks.thumbnail ||
+            volumeInfo.imageLinks.smallThumbnail;
+
+          // Upgrade to HTTPS and remove parameters for better quality
+          if (coverUrl) {
+            coverUrl = coverUrl.replace('http://', 'https://');
+            coverUrl = coverUrl.replace('&zoom=1', '');
+            coverUrl = coverUrl.replace('&edge=curl', '');
+            // Increase image size by replacing size parameter
+            coverUrl = coverUrl.replace('zoom=1', 'zoom=0');
+            result.coverUrl = coverUrl;
+          }
+        }
+
+        // Extract genre (categories)
+        if (volumeInfo.categories && volumeInfo.categories.length > 0) {
+          result.genre = volumeInfo.categories.join(', ');
+        }
+
+        // Extract description
+        if (volumeInfo.description) {
+          result.description = volumeInfo.description;
+        }
+
+        // Extract publisher
+        if (volumeInfo.publisher) {
+          result.publisher = volumeInfo.publisher;
+        }
+
+        // Extract published date
+        if (volumeInfo.publishedDate) {
+          result.publishedDate = volumeInfo.publishedDate;
+        }
+
+        // Extract page count
+        if (volumeInfo.pageCount && volumeInfo.pageCount > 0) {
+          result.pageCount = volumeInfo.pageCount;
+        }
+
+        // If we found good results, break out of the loop
+        if (result.coverUrl || result.description) {
+          break;
+        }
+      } catch (strategyError) {
+        console.error(`Google Books strategy "${searchQuery}" failed:`, strategyError);
+        continue;
       }
-    }
-
-    // Extract genre (categories)
-    if (volumeInfo.categories && volumeInfo.categories.length > 0) {
-      result.genre = volumeInfo.categories.join(', ');
-    }
-
-    // Extract description
-    if (volumeInfo.description) {
-      result.description = volumeInfo.description;
     }
 
   } catch (error) {
@@ -93,29 +180,89 @@ async function fetchFromOpenLibrary(isbn: string | null, title: string, author: 
     coverUrl: null as string | null,
     genre: null as string | null,
     description: null as string | null,
+    publisher: null as string | null,
+    publishedDate: null as string | null,
+    pageCount: null as number | null,
   };
 
   try {
-    // Try ISBN first
-    if (isbn) {
-      const response = await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.covers && data.covers[0]) {
-          result.coverUrl = `https://covers.openlibrary.org/b/id/${data.covers[0]}-L.jpg`;
+    // Clean ISBN
+    const cleanISBN = isbn ? isbn.replace(/[-\s]/g, '') : null;
+
+    // Try ISBN lookup first (most reliable)
+    if (cleanISBN) {
+      try {
+        // Try both ISBN-13 and ISBN-10 formats
+        for (const isbnVariant of [cleanISBN]) {
+          const response = await fetchWithRetry(`https://openlibrary.org/isbn/${isbnVariant}.json`);
+          if (response.ok) {
+            const data = await response.json();
+
+            // Extract cover image (high quality)
+            if (data.covers && data.covers[0]) {
+              result.coverUrl = `https://covers.openlibrary.org/b/id/${data.covers[0]}-L.jpg`;
+            }
+
+            // Extract description
+            if (data.description) {
+              result.description = typeof data.description === 'string'
+                ? data.description
+                : data.description.value;
+            }
+
+            // Extract publishers
+            if (data.publishers && data.publishers.length > 0) {
+              result.publisher = data.publishers[0];
+            }
+
+            // Extract publish date
+            if (data.publish_date) {
+              result.publishedDate = data.publish_date;
+            }
+
+            // Extract page count
+            if (data.number_of_pages && data.number_of_pages > 0) {
+              result.pageCount = data.number_of_pages;
+            }
+
+            // Fetch work details for more complete information
+            if (data.works && data.works[0]?.key) {
+              try {
+                const workResponse = await fetchWithRetry(`https://openlibrary.org${data.works[0].key}.json`);
+                if (workResponse.ok) {
+                  const workData = await workResponse.json();
+
+                  // Get description from work if not in edition
+                  if (!result.description && workData.description) {
+                    result.description = typeof workData.description === 'string'
+                      ? workData.description
+                      : workData.description.value;
+                  }
+
+                  // Get subjects/genres
+                  if (workData.subjects && workData.subjects.length > 0) {
+                    result.genre = workData.subjects.slice(0, 3).join(', ');
+                  }
+                }
+              } catch (workError) {
+                // Continue without work data
+              }
+            }
+
+            // If we got some data, return it
+            if (result.coverUrl || result.description) {
+              return result;
+            }
+          }
         }
-        if (data.description) {
-          result.description = typeof data.description === 'string'
-            ? data.description
-            : data.description.value;
-        }
-        return result;
+      } catch (isbnError) {
+        console.error('OpenLibrary ISBN lookup failed:', isbnError);
       }
     }
 
     // Fallback to title/author search
-    const searchResponse = await fetch(
-      `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&limit=3`
+    const searchResponse = await fetchWithRetry(
+      `https://openlibrary.org/search.json?title=${encodeURIComponent(title)}&author=${encodeURIComponent(author)}&limit=5`
     );
 
     if (!searchResponse.ok) return result;
@@ -126,9 +273,11 @@ async function fetchFromOpenLibrary(isbn: string | null, title: string, author: 
 
     const book = findBestMatch(searchData.docs, title, author);
 
-    // Get cover image
+    // Get cover image (high quality)
     if (book.cover_i) {
       result.coverUrl = `https://covers.openlibrary.org/b/id/${book.cover_i}-L.jpg`;
+    } else if (book.isbn && book.isbn[0]) {
+      result.coverUrl = `https://covers.openlibrary.org/b/isbn/${book.isbn[0]}-L.jpg`;
     }
 
     // Get genres from subjects
@@ -136,10 +285,25 @@ async function fetchFromOpenLibrary(isbn: string | null, title: string, author: 
       result.genre = book.subject.slice(0, 3).join(', ');
     }
 
+    // Get publisher
+    if (book.publisher && book.publisher.length > 0) {
+      result.publisher = book.publisher[0];
+    }
+
+    // Get publish date
+    if (book.first_publish_year) {
+      result.publishedDate = book.first_publish_year.toString();
+    }
+
+    // Get page count
+    if (book.number_of_pages_median && book.number_of_pages_median > 0) {
+      result.pageCount = book.number_of_pages_median;
+    }
+
     // Fetch description from work if available
     if (book.key) {
       try {
-        const workResponse = await fetch(`https://openlibrary.org${book.key}.json`);
+        const workResponse = await fetchWithRetry(`https://openlibrary.org${book.key}.json`);
         if (workResponse.ok) {
           const workData = await workResponse.json();
           if (workData.description) {
@@ -158,6 +322,41 @@ async function fetchFromOpenLibrary(isbn: string | null, title: string, author: 
   }
 
   return result;
+}
+
+// Helper function to retry failed fetch requests
+async function fetchWithRetry(url: string, retries = 2, delay = 1000): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': 'CozyReads/1.0 (Book enrichment service)',
+        },
+      });
+
+      // If successful or client error (4xx), return immediately
+      if (response.ok || (response.status >= 400 && response.status < 500)) {
+        return response;
+      }
+
+      // Server error (5xx) - retry
+      if (i < retries) {
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        continue;
+      }
+
+      return response;
+    } catch (error) {
+      // Network error - retry
+      if (i < retries) {
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)));
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  throw new Error(`Failed to fetch after ${retries} retries`);
 }
 
 // Find the best match from search results using fuzzy matching

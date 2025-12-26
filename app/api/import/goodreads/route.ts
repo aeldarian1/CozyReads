@@ -43,9 +43,11 @@ export async function POST(request: NextRequest) {
     // 2. Parse multipart form data
     const formData = await request.formData();
     const file = formData.get('file') as File;
+    const previewOnly = formData.get('previewOnly') === 'true';
     const skipDuplicates = formData.get('skipDuplicates') === 'true';
     const createCollections = formData.get('createCollections') === 'true';
     const enrichFromGoogle = formData.get('enrichFromGoogle') === 'true';
+    const selectedIndicesStr = formData.get('selectedIndices') as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -86,40 +88,126 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Import books
-    const importResult = await importGoodreadsBooks(user.id, books, {
-      skipDuplicates,
-      createCollections,
-      enrichFromGoogle,
-    });
+    // 6. If preview only, return parsed books
+    if (previewOnly) {
+      return NextResponse.json({
+        success: true,
+        books,
+        parseErrors,
+        totalBooks: books.length,
+      });
+    }
 
-    // 7. Save import history
-    await prisma.importHistory.create({
-      data: {
-        userId: user.id,
-        source: 'goodreads-csv',
-        fileName: file.name,
-        totalRows: books.length,
-        successCount: importResult.imported,
-        skipCount: importResult.skipped,
-        errorCount: importResult.failed,
-        errors: importResult.errors,
+    // 7. Filter by selected indices if provided
+    let booksToImport = books;
+    if (selectedIndicesStr) {
+      try {
+        const selectedIndices = JSON.parse(selectedIndicesStr) as number[];
+        booksToImport = books.filter((_, index) => selectedIndices.includes(index));
+      } catch (e) {
+        console.error('Error parsing selectedIndices:', e);
+      }
+    }
+
+    // 8. Stream import progress
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        try {
+          let processed = 0;
+          const total = booksToImport.length;
+
+          // Import books one by one and stream progress
+          const results = {
+            totalProcessed: 0,
+            imported: 0,
+            skipped: 0,
+            failed: 0,
+            errors: [] as any[],
+            collectionsCreated: [] as string[],
+          };
+
+          for (const book of booksToImport) {
+            processed++;
+
+            // Send progress update
+            const progressData = {
+              type: 'progress',
+              current: processed,
+              total,
+              currentBook: book.title,
+            };
+            controller.enqueue(encoder.encode(JSON.stringify(progressData) + '\n'));
+
+            // Import single book
+            try {
+              const singleResult = await importGoodreadsBooks(user.id, [book], {
+                skipDuplicates,
+                createCollections,
+                enrichFromGoogle,
+              });
+
+              results.totalProcessed += singleResult.totalProcessed;
+              results.imported += singleResult.imported;
+              results.skipped += singleResult.skipped;
+              results.failed += singleResult.failed;
+              results.errors.push(...singleResult.errors);
+
+              // Track unique collections
+              singleResult.collectionsCreated.forEach((col: string) => {
+                if (!results.collectionsCreated.includes(col)) {
+                  results.collectionsCreated.push(col);
+                }
+              });
+            } catch (error) {
+              results.failed++;
+              results.totalProcessed++;
+              results.errors.push({
+                book: book.title,
+                error: error instanceof Error ? error.message : 'Unknown error',
+              });
+            }
+          }
+
+          // Save import history
+          await prisma.importHistory.create({
+            data: {
+              userId: user.id,
+              source: 'goodreads-csv',
+              fileName: file.name,
+              totalRows: booksToImport.length,
+              successCount: results.imported,
+              skipCount: results.skipped,
+              errorCount: results.failed,
+              errors: results.errors,
+            },
+          });
+
+          // Send final result
+          const finalData = {
+            type: 'complete',
+            result: results,
+          };
+          controller.enqueue(encoder.encode(JSON.stringify(finalData) + '\n'));
+          controller.close();
+        } catch (error) {
+          const errorData = {
+            type: 'error',
+            error: error instanceof Error ? error.message : 'Unknown error',
+          };
+          controller.enqueue(encoder.encode(JSON.stringify(errorData) + '\n'));
+          controller.close();
+        }
       },
     });
 
-    // 8. Return success response
-    return NextResponse.json({
-      success: true,
-      message: `Import completed successfully`,
-      result: {
-        totalProcessed: importResult.totalProcessed,
-        imported: importResult.imported,
-        skipped: importResult.skipped,
-        failed: importResult.failed,
-        errors: importResult.errors,
-        collectionsCreated: importResult.collectionsCreated,
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
       },
-    }, { status: 200 });
+    });
 
   } catch (error) {
     console.error('Error importing Goodreads CSV:', error);

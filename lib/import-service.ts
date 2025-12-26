@@ -135,6 +135,9 @@ export async function importGoodreadsBooks(
             coverUrl: null as string | null,
             genre: null as string | null,
             description: null as string | null,
+            publisher: null as string | null,
+            publishedDate: null as string | null,
+            pageCount: null as number | null,
           };
 
           if (options.enrichFromGoogle) {
@@ -162,6 +165,25 @@ export async function importGoodreadsBooks(
             return;
           }
 
+          // Use enriched page count if available and more reliable than Goodreads data
+          const finalTotalPages = enrichedData.pageCount || book.totalPages;
+
+          // Prepare external metadata with enrichment info
+          const externalMetadata: any = {
+            originalShelves: book.shelves,
+          };
+
+          // Add enriched metadata if available
+          if (enrichedData.publisher) {
+            externalMetadata.publisher = enrichedData.publisher;
+          }
+          if (enrichedData.publishedDate) {
+            externalMetadata.publishedDate = enrichedData.publishedDate;
+          }
+          if (enrichedData.pageCount) {
+            externalMetadata.enrichedPageCount = enrichedData.pageCount;
+          }
+
           // Use transaction to ensure atomicity
           await prisma.$transaction(async (tx) => {
             // Create book
@@ -177,15 +199,13 @@ export async function importGoodreadsBooks(
                 rating: book.rating,
                 review: book.review,
                 readingStatus: book.readingStatus,
-                totalPages: book.totalPages,
+                totalPages: finalTotalPages,
                 dateAdded: book.dateAdded,
                 dateFinished: book.dateFinished,
                 goodreadsId: book.goodreadsId,
                 externalSource: 'goodreads',
                 importedAt: new Date(),
-                externalMetadata: {
-                  originalShelves: book.shelves,
-                },
+                externalMetadata,
               },
             });
 

@@ -11,6 +11,21 @@ interface ImportResult {
   collectionsCreated: string[];
 }
 
+interface ParsedBook {
+  title: string;
+  author: string;
+  isbn: string | null;
+  rating: number;
+  readingStatus: string;
+  totalPages: number | null;
+  review: string | null;
+  genre: string | null;
+  shelves: string[];
+  dateAdded: string;
+}
+
+type ImportStep = 'upload' | 'preview' | 'importing' | 'complete';
+
 export function ImportGoodreadsModal({
   isOpen,
   onClose,
@@ -24,28 +39,76 @@ export function ImportGoodreadsModal({
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [createCollections, setCreateCollections] = useState(true);
   const [enrichFromGoogle, setEnrichFromGoogle] = useState(true);
-  const [isImporting, setIsImporting] = useState(false);
+  const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
+  const [parsedBooks, setParsedBooks] = useState<ParsedBook[]>([]);
+  const [selectedBookIndices, setSelectedBookIndices] = useState<Set<number>>(new Set());
+  const [progress, setProgress] = useState({ current: 0, total: 0, currentBook: '' });
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string>('');
+  const [expandedErrors, setExpandedErrors] = useState<Set<number>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
       setError('');
       setImportResult(null);
+
+      // Parse CSV to show preview
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('previewOnly', 'true');
+
+        const response = await fetch('/api/import/goodreads', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to parse CSV');
+        }
+
+        setParsedBooks(data.books || []);
+        // Select all books by default
+        setSelectedBookIndices(new Set(data.books.map((_: any, idx: number) => idx)));
+        setCurrentStep('preview');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to parse CSV');
+      }
     }
   };
 
+  const toggleBookSelection = (index: number) => {
+    const newSelected = new Set(selectedBookIndices);
+    if (newSelected.has(index)) {
+      newSelected.delete(index);
+    } else {
+      newSelected.add(index);
+    }
+    setSelectedBookIndices(newSelected);
+  };
+
+  const selectAll = () => {
+    setSelectedBookIndices(new Set(parsedBooks.map((_, idx) => idx)));
+  };
+
+  const deselectAll = () => {
+    setSelectedBookIndices(new Set());
+  };
+
   const handleImport = async () => {
-    if (!selectedFile) {
-      setError('Please select a file');
+    if (!selectedFile || selectedBookIndices.size === 0) {
+      setError('Please select at least one book to import');
       return;
     }
 
-    setIsImporting(true);
+    setCurrentStep('importing');
     setError('');
+    setProgress({ current: 0, total: selectedBookIndices.size, currentBook: '' });
 
     try {
       const formData = new FormData();
@@ -53,31 +116,59 @@ export function ImportGoodreadsModal({
       formData.append('skipDuplicates', String(skipDuplicates));
       formData.append('createCollections', String(createCollections));
       formData.append('enrichFromGoogle', String(enrichFromGoogle));
+      formData.append('selectedIndices', JSON.stringify(Array.from(selectedBookIndices)));
 
       const response = await fetch('/api/import/goodreads', {
         method: 'POST',
         body: formData,
       });
 
-      const data = await response.json();
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Import failed');
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (line.trim()) {
+              try {
+                const data = JSON.parse(line);
+                if (data.type === 'progress') {
+                  setProgress(data.progress);
+                } else if (data.type === 'complete') {
+                  setImportResult(data.result);
+                  setCurrentStep('complete');
+                  onImportComplete();
+                }
+              } catch (e) {
+                console.error('Failed to parse progress:', e);
+              }
+            }
+          }
+        }
       }
-
-      setImportResult(data.result);
-      onImportComplete(); // Refresh books list
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed');
-    } finally {
-      setIsImporting(false);
+      setCurrentStep('preview');
     }
   };
 
   const resetModal = () => {
     setSelectedFile(null);
+    setParsedBooks([]);
+    setSelectedBookIndices(new Set());
     setImportResult(null);
     setError('');
+    setCurrentStep('upload');
+    setProgress({ current: 0, total: 0, currentBook: '' });
+    setExpandedErrors(new Set());
     setSkipDuplicates(true);
     setCreateCollections(true);
     setEnrichFromGoogle(true);
@@ -91,13 +182,34 @@ export function ImportGoodreadsModal({
     onClose();
   };
 
+  const toggleErrorExpand = (index: number) => {
+    const newExpanded = new Set(expandedErrors);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedErrors(newExpanded);
+  };
+
+  // Group errors by type
+  const groupedErrors = importResult?.errors.reduce((acc, error) => {
+    const type = error.error.includes('ISBN') ? 'ISBN Missing' :
+                 error.error.includes('Rating') ? 'Rating Missing' :
+                 error.error.includes('Description') ? 'Description Missing' :
+                 'Other';
+    if (!acc[type]) acc[type] = [];
+    acc[type].push(error);
+    return acc;
+  }, {} as Record<string, typeof importResult.errors>) || {};
+
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn" style={{
       background: 'rgba(0, 0, 0, 0.7)'
     }}>
-      <div className="rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" style={{
+      <div className="rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" style={{
         background: 'var(--bg-primary)',
         boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
         border: '1px solid var(--border-color)'
@@ -114,32 +226,54 @@ export function ImportGoodreadsModal({
             Import from Goodreads
           </h2>
           <p className="text-amber-100 mt-2 text-sm">
-            Import your reading library from a Goodreads CSV export
+            {currentStep === 'upload' && 'Import your reading library from a Goodreads CSV export'}
+            {currentStep === 'preview' && `Found ${parsedBooks.length} books - select which ones to import`}
+            {currentStep === 'importing' && `Importing ${progress.current} of ${progress.total} books...`}
+            {currentStep === 'complete' && 'Import complete!'}
           </p>
+
+          {/* Progress Bar */}
+          {currentStep === 'importing' && (
+            <div className="mt-4">
+              <div className="w-full rounded-full h-3 overflow-hidden" style={{
+                background: 'rgba(255, 255, 255, 0.2)'
+              }}>
+                <div
+                  className="h-full transition-all duration-300"
+                  style={{
+                    width: `${(progress.current / progress.total) * 100}%`,
+                    background: 'linear-gradient(90deg, #d4a574 0%, #c9a961 100%)',
+                  }}
+                />
+              </div>
+              <p className="text-amber-100 text-xs mt-2">
+                {progress.currentBook && `Processing: ${progress.currentBook}`}
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="p-6">
-          {/* Instructions */}
-          {!importResult && (
-            <div className="mb-6 p-4 rounded-xl" style={{
-              background: 'var(--bg-tertiary)',
-              border: '1px solid var(--border-color)',
-            }}>
-              <h3 className="font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--text-dark)' }}>
-                <span>💡</span> How to export from Goodreads:
-              </h3>
-              <ol className="text-sm space-y-1 ml-6 list-decimal" style={{ color: 'var(--text-muted)' }}>
-                <li>Go to <a href="https://www.goodreads.com/review/import" target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:underline">Goodreads Import/Export</a></li>
-                <li>Click "Export Library" button</li>
-                <li>Wait for the CSV file to download</li>
-                <li>Upload the file below</li>
-              </ol>
-            </div>
-          )}
-
-          {/* File Upload */}
-          {!importResult && (
+          {/* Step 1: Upload */}
+          {currentStep === 'upload' && (
             <>
+              {/* Instructions */}
+              <div className="mb-6 p-4 rounded-xl" style={{
+                background: 'var(--bg-tertiary)',
+                border: '1px solid var(--border-color)',
+              }}>
+                <h3 className="font-bold mb-2 flex items-center gap-2" style={{ color: 'var(--text-dark)' }}>
+                  <span>💡</span> How to export from Goodreads:
+                </h3>
+                <ol className="text-sm space-y-1 ml-6 list-decimal" style={{ color: 'var(--text-muted)' }}>
+                  <li>Go to <a href="https://www.goodreads.com/review/import" target="_blank" rel="noopener noreferrer" className="text-amber-700 hover:underline">Goodreads Import/Export</a></li>
+                  <li>Click "Export Library" button</li>
+                  <li>Wait for the CSV file to download</li>
+                  <li>Upload the file below</li>
+                </ol>
+              </div>
+
+              {/* File Upload */}
               <div className="mb-6">
                 <label className="block font-bold mb-3" style={{ color: 'var(--text-dark)' }}>
                   Select CSV File
@@ -165,19 +299,6 @@ export function ImportGoodreadsModal({
                     <span>📁</span>
                     Choose File
                   </label>
-                  {selectedFile && (
-                    <div className="flex-1 px-4 py-2 rounded-lg" style={{
-                      background: 'var(--bg-secondary)',
-                      border: '1px solid var(--border-color)',
-                    }}>
-                      <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-dark)' }}>
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        {(selectedFile.size / 1024).toFixed(2)} KB
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -256,8 +377,139 @@ export function ImportGoodreadsModal({
             </>
           )}
 
-          {/* Import Result */}
-          {importResult && (
+          {/* Step 2: Preview */}
+          {currentStep === 'preview' && (
+            <>
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-dark)' }}>
+                    {selectedBookIndices.size} of {parsedBooks.length} books selected
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={selectAll}
+                    className="px-3 py-1 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-dark)',
+                      border: '1px solid var(--border-color)',
+                    }}
+                  >
+                    Select All
+                  </button>
+                  <button
+                    onClick={deselectAll}
+                    className="px-3 py-1 rounded-lg text-sm font-semibold transition-all hover:scale-105"
+                    style={{
+                      background: 'var(--bg-tertiary)',
+                      color: 'var(--text-dark)',
+                      border: '1px solid var(--border-color)',
+                    }}
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+
+              <div className="max-h-96 overflow-y-auto rounded-xl" style={{
+                background: 'var(--bg-secondary)',
+                border: '1px solid var(--border-color)',
+              }}>
+                {parsedBooks.slice(0, 50).map((book, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => toggleBookSelection(idx)}
+                    className="p-3 border-b cursor-pointer transition-all hover:bg-opacity-70"
+                    style={{
+                      borderColor: 'var(--border-color)',
+                      background: selectedBookIndices.has(idx) ? 'var(--bg-tertiary)' : 'transparent',
+                    }}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedBookIndices.has(idx)}
+                        onChange={() => toggleBookSelection(idx)}
+                        className="mt-1 w-4 h-4 rounded"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate" style={{ color: 'var(--text-dark)' }}>
+                          {book.title}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: 'var(--text-muted)' }}>
+                          by {book.author}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {book.isbn && (
+                            <span className="text-xs px-2 py-0.5 rounded" style={{
+                              background: 'rgba(34, 197, 94, 0.1)',
+                              color: '#15803d',
+                            }}>
+                              ISBN ✓
+                            </span>
+                          )}
+                          {book.rating > 0 && (
+                            <span className="text-xs px-2 py-0.5 rounded" style={{
+                              background: 'rgba(234, 179, 8, 0.1)',
+                              color: '#a16207',
+                            }}>
+                              {book.rating} ★
+                            </span>
+                          )}
+                          <span className="text-xs px-2 py-0.5 rounded" style={{
+                            background: 'rgba(139, 111, 71, 0.1)',
+                            color: 'var(--warm-brown)',
+                          }}>
+                            {book.readingStatus}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {parsedBooks.length > 50 && (
+                  <div className="p-3 text-center text-sm" style={{ color: 'var(--text-muted)' }}>
+                    +{parsedBooks.length - 50} more books (showing first 50)
+                  </div>
+                )}
+              </div>
+
+              {error && (
+                <div className="mt-4 p-4 rounded-xl" style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
+                }}>
+                  <p className="text-red-700 font-semibold flex items-center gap-2">
+                    <span>⚠️</span>
+                    {error}
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Step 3: Importing (Progress) */}
+          {currentStep === 'importing' && (
+            <div className="text-center py-12">
+              <div className="inline-block">
+                <svg className="animate-spin h-16 w-16 mb-4" fill="none" viewBox="0 0 24 24" style={{ color: 'var(--warm-brown)' }}>
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              </div>
+              <p className="text-xl font-bold mb-2" style={{ color: 'var(--text-dark)' }}>
+                Importing your library...
+              </p>
+              <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
+                {progress.current} of {progress.total} books processed
+              </p>
+            </div>
+          )}
+
+          {/* Step 4: Complete */}
+          {currentStep === 'complete' && importResult && (
             <div className="space-y-4">
               <div className="p-6 rounded-xl" style={{
                 background: 'var(--gradient-card)',
@@ -268,40 +520,37 @@ export function ImportGoodreadsModal({
                   Import Complete!
                 </h3>
 
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
-                    <p className="text-2xl font-bold" style={{ color: '#22c55e' }}>
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="p-3 rounded-lg text-center" style={{ background: 'rgba(34, 197, 94, 0.1)' }}>
+                    <p className="text-3xl font-bold mb-1" style={{ color: '#15803d' }}>
                       {importResult.imported}
                     </p>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      Books Imported
+                    <p className="text-xs font-semibold" style={{ color: '#15803d' }}>
+                      Imported
                     </p>
                   </div>
-                  <div className="p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
-                    <p className="text-2xl font-bold" style={{ color: '#f59e0b' }}>
+                  <div className="p-3 rounded-lg text-center" style={{ background: 'rgba(234, 179, 8, 0.1)' }}>
+                    <p className="text-3xl font-bold mb-1" style={{ color: '#a16207' }}>
                       {importResult.skipped}
                     </p>
-                    <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-                      Skipped (Duplicates)
+                    <p className="text-xs font-semibold" style={{ color: '#a16207' }}>
+                      Skipped
+                    </p>
+                  </div>
+                  <div className="p-3 rounded-lg text-center" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
+                    <p className="text-3xl font-bold mb-1" style={{ color: '#b91c1c' }}>
+                      {importResult.failed}
+                    </p>
+                    <p className="text-xs font-semibold" style={{ color: '#b91c1c' }}>
+                      Failed
                     </p>
                   </div>
                 </div>
 
-                {importResult.failed > 0 && (
-                  <div className="p-3 rounded-lg mb-4" style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
-                    <p className="text-lg font-bold text-red-700">
-                      {importResult.failed} Failed
-                    </p>
-                    <p className="text-xs text-red-600">
-                      See details below
-                    </p>
-                  </div>
-                )}
-
                 {importResult.collectionsCreated.length > 0 && (
                   <div className="p-3 rounded-lg" style={{ background: 'var(--bg-secondary)' }}>
                     <p className="font-semibold mb-2" style={{ color: 'var(--text-dark)' }}>
-                      Collections Created:
+                      Collections Created ({importResult.collectionsCreated.length}):
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {importResult.collectionsCreated.map((name, idx) => (
@@ -321,23 +570,60 @@ export function ImportGoodreadsModal({
                 )}
               </div>
 
-              {/* Error Details */}
-              {importResult.errors.length > 0 && (
-                <div className="p-4 rounded-xl max-h-60 overflow-y-auto" style={{
-                  background: 'rgba(239, 68, 68, 0.05)',
-                  border: '1px solid rgba(239, 68, 68, 0.2)',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'var(--warm-brown) transparent',
-                }}>
-                  <h4 className="font-bold mb-3 text-red-700">Import Errors:</h4>
-                  <div className="space-y-2">
-                    {importResult.errors.map((err, idx) => (
-                      <div key={idx} className="p-2 rounded bg-white text-xs">
-                        <p className="font-semibold text-red-800">Row {err.row}: {err.book}</p>
-                        <p className="text-red-600">{err.error}</p>
-                      </div>
-                    ))}
-                  </div>
+              {/* Grouped Error Details */}
+              {Object.keys(groupedErrors).length > 0 && (
+                <div className="space-y-3">
+                  <h4 className="font-bold" style={{ color: 'var(--text-dark)' }}>
+                    Import Issues:
+                  </h4>
+                  {Object.entries(groupedErrors).map(([errorType, errors], groupIdx) => (
+                    <div key={groupIdx} className="rounded-xl overflow-hidden" style={{
+                      border: '1px solid rgba(239, 68, 68, 0.3)',
+                    }}>
+                      <button
+                        onClick={() => toggleErrorExpand(groupIdx)}
+                        className="w-full p-4 flex items-center justify-between transition-all hover:bg-opacity-80"
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                        }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">
+                            {errorType.includes('ISBN') ? '🔢' :
+                             errorType.includes('Rating') ? '⭐' :
+                             errorType.includes('Description') ? '📝' : '⚠️'}
+                          </span>
+                          <div className="text-left">
+                            <p className="font-bold text-red-700">{errorType}</p>
+                            <p className="text-xs text-red-600">{errors.length} books affected</p>
+                          </div>
+                        </div>
+                        <svg
+                          className={`w-5 h-5 transition-transform ${expandedErrors.has(groupIdx) ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                          style={{ color: '#b91c1c' }}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {expandedErrors.has(groupIdx) && (
+                        <div className="p-4 space-y-2 max-h-60 overflow-y-auto" style={{
+                          background: 'white',
+                        }}>
+                          {errors.map((err, idx) => (
+                            <div key={idx} className="p-2 rounded text-xs" style={{
+                              background: 'rgba(239, 68, 68, 0.05)',
+                            }}>
+                              <p className="font-semibold text-red-800">Row {err.row}: {err.book}</p>
+                              <p className="text-red-600">{err.error}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -345,6 +631,19 @@ export function ImportGoodreadsModal({
 
           {/* Action Buttons */}
           <div className="flex gap-4 pt-6 border-t" style={{ borderColor: 'var(--border-color)' }}>
+            {currentStep === 'preview' && (
+              <button
+                onClick={() => setCurrentStep('upload')}
+                className="px-6 py-3 rounded-xl font-bold transition-all hover:scale-105"
+                style={{
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--text-dark)',
+                  border: '2px solid var(--border-color)',
+                }}
+              >
+                ← Back
+              </button>
+            )}
             <button
               onClick={handleClose}
               className="flex-1 px-6 py-3 rounded-xl font-bold transition-all hover:scale-105"
@@ -354,12 +653,12 @@ export function ImportGoodreadsModal({
                 border: '2px solid var(--border-color)',
               }}
             >
-              {importResult ? 'Close' : 'Cancel'}
+              {currentStep === 'complete' ? 'Close' : 'Cancel'}
             </button>
-            {!importResult && (
+            {currentStep === 'preview' && (
               <button
                 onClick={handleImport}
-                disabled={!selectedFile || isImporting}
+                disabled={selectedBookIndices.size === 0}
                 className="flex-1 px-6 py-3 rounded-xl font-bold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
                   background: 'var(--gradient-accent)',
@@ -367,17 +666,7 @@ export function ImportGoodreadsModal({
                   border: '2px solid rgba(255, 255, 255, 0.3)',
                 }}
               >
-                {isImporting ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Importing...
-                  </span>
-                ) : (
-                  'Start Import'
-                )}
+                Import {selectedBookIndices.size} Books
               </button>
             )}
           </div>
