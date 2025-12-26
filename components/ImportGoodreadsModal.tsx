@@ -141,11 +141,18 @@ export function ImportGoodreadsModal({
               try {
                 const data = JSON.parse(line);
                 if (data.type === 'progress') {
-                  setProgress(data.progress);
+                  setProgress({
+                    current: data.current || 0,
+                    total: data.total || 0,
+                    currentBook: data.currentBook || '',
+                  });
                 } else if (data.type === 'complete') {
                   setImportResult(data.result);
                   setCurrentStep('complete');
                   onImportComplete();
+                } else if (data.type === 'error') {
+                  setError(data.error || 'Import failed');
+                  setCurrentStep('preview');
                 }
               } catch (e) {
                 console.error('Failed to parse progress:', e);

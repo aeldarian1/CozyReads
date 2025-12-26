@@ -221,14 +221,32 @@ h1, h2, h3, h4, h5, h6 {
   will-change: transform;
 }
 
-/* 3D Book hover effect */
+/* 3D Book hover effect - optimized for performance */
 .hover-3d-book {
   transform: translateZ(0) rotateY(0) translateX(0);
+  will-change: transform;
 }
 
 .hover-3d-book:hover {
   transform: translateZ(20px) rotateY(-8deg) translateX(-8px);
   z-index: 20;
+}
+
+/* Smooth transitions for modal opening/closing */
+@media (prefers-reduced-motion: no-preference) {
+  .hover-3d-book {
+    transition: transform 0.2s ease-out;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .hover-3d-book {
+    transition: none;
+  }
+  .hover-3d-book:hover {
+    transform: translateX(-4px);
+  }
 }
 
 /* Hide scrollbar for horizontal book scrolling but keep functionality */

@@ -39,8 +39,9 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
         width: `${width}px`,
         height: `${height}px`,
         transformStyle: 'preserve-3d',
-        transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)',
+        transition: 'transform 0.2s ease-out',
         position: 'relative',
+        willChange: 'transform',
       }}
       title={`${book.title} by ${book.author}${book.rating > 0 ? ` • ${'★'.repeat(book.rating)}` : ''}`}
     >
@@ -66,12 +67,11 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
           transformStyle: 'preserve-3d',
         }}
       >
-        {/* Spine left edge highlight */}
+        {/* Spine left edge highlight - very subtle */}
         <div
-          className="absolute left-0 top-0 bottom-0 w-1"
+          className="absolute left-0 top-0 bottom-0 w-px"
           style={{
-            background: `linear-gradient(to right, ${isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.5)'}, transparent)`,
-            borderRadius: '3px 0 0 3px',
+            background: `linear-gradient(to bottom, ${isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255, 255, 255, 0.25)'} 10%, transparent 90%)`,
           }}
         />
 
@@ -137,28 +137,37 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
           </div>
         </div>
 
-        {/* Rating stars */}
-        {book.rating > 0 && height > 100 && (
+        {/* Rating badge - clean corner badge */}
+        {book.rating > 0 && (
           <div
-            className="absolute top-3 left-0 right-0 flex justify-center items-center gap-0.5 px-1"
+            className="absolute top-1 right-1 px-1.5 py-0.5 rounded-full flex items-center gap-0.5"
             style={{
-              transform: 'rotate(-90deg)',
-              transformOrigin: 'center',
+              background: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(4px)',
+              boxShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
             }}
           >
-            {[...Array(book.rating)].map((_, i) => (
-              <span
-                key={i}
-                style={{
-                  color: '#ffd700',
-                  fontSize: '10px',
-                  textShadow: '0 1px 4px rgba(0, 0, 0, 1), 0 0 3px rgba(0, 0, 0, 0.6)',
-                  filter: 'drop-shadow(0 0 2px rgba(255, 215, 0, 0.6))',
-                }}
-              >
-                ★
-              </span>
-            ))}
+            <span
+              style={{
+                color: '#ffd700',
+                fontSize: '9px',
+                lineHeight: 1,
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)',
+              }}
+            >
+              ★
+            </span>
+            <span
+              style={{
+                color: '#ffffff',
+                fontSize: '8px',
+                fontWeight: 'bold',
+                lineHeight: 1,
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.8)',
+              }}
+            >
+              {book.rating}
+            </span>
           </div>
         )}
 
