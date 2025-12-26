@@ -61,10 +61,18 @@ export async function GET(request: NextRequest) {
         }),
       });
 
+      console.log('Hardcover API Status:', hardcoverResponse.status, hardcoverResponse.statusText);
+      console.log('Hardcover Token Present:', !!hardcoverToken);
+
       if (hardcoverResponse.ok) {
         const hardcoverData = await hardcoverResponse.json();
 
         console.log('Hardcover API Response:', JSON.stringify(hardcoverData, null, 2));
+
+        // Check for GraphQL errors
+        if (hardcoverData.errors) {
+          console.error('Hardcover GraphQL Errors:', JSON.stringify(hardcoverData.errors, null, 2));
+        }
 
         if (hardcoverData.data?.books) {
           books = hardcoverData.data.books.map((book: any) => {
@@ -94,6 +102,10 @@ export async function GET(request: NextRequest) {
             };
           });
         }
+      } else {
+        console.error('Hardcover API returned error status:', hardcoverResponse.status);
+        const errorText = await hardcoverResponse.text();
+        console.error('Hardcover Error Response:', errorText);
       }
     } catch (hardcoverError) {
       console.error('Hardcover search failed:', hardcoverError);
