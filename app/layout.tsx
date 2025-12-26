@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { Merriweather, Playfair_Display, Open_Sans } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ToastProvider } from '@/contexts/ToastContext';
+import { QueryProvider } from '@/components/QueryProvider';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import "./globals.css";
 
 const merriweather = Merriweather({
@@ -41,9 +44,15 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className={`${merriweather.variable} ${playfair.variable} ${openSans.variable}`}>
         <body className="antialiased">
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
+          <ErrorBoundary>
+            <QueryProvider>
+              <ThemeProvider>
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
+              </ThemeProvider>
+            </QueryProvider>
+          </ErrorBoundary>
         </body>
       </html>
     </ClerkProvider>
