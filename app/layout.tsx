@@ -25,6 +25,7 @@ const openSans = Open_Sans({
 export const metadata: Metadata = {
   title: "CozyReads",
   description: "Your personal book collection manager",
+  viewport: "width=device-width, initial-scale=1",
 };
 
 export default function RootLayout({
