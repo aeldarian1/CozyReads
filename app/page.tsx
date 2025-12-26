@@ -102,20 +102,46 @@ export default function Home() {
   const loadBooks = async () => {
     try {
       const response = await fetch('/api/books');
+      if (!response.ok) {
+        if (response.status === 401) {
+          // User not authenticated, will be redirected by middleware
+          return;
+        }
+        throw new Error(`Failed to load books: ${response.status}`);
+      }
       const data = await response.json();
-      setBooks(data);
+      if (Array.isArray(data)) {
+        setBooks(data);
+      } else {
+        console.error('Books data is not an array:', data);
+        setBooks([]);
+      }
     } catch (error) {
       console.error('Error loading books:', error);
+      setBooks([]);
     }
   };
 
   const loadCollections = async () => {
     try {
       const response = await fetch('/api/collections');
+      if (!response.ok) {
+        if (response.status === 401) {
+          // User not authenticated, will be redirected by middleware
+          return;
+        }
+        throw new Error(`Failed to load collections: ${response.status}`);
+      }
       const data = await response.json();
-      setCollections(data);
+      if (Array.isArray(data)) {
+        setCollections(data);
+      } else {
+        console.error('Collections data is not an array:', data);
+        setCollections([]);
+      }
     } catch (error) {
       console.error('Error loading collections:', error);
+      setCollections([]);
     }
   };
 
