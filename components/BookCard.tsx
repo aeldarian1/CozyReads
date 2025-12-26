@@ -218,12 +218,12 @@ export function BookCard({
 
         {/* Action hint overlay on hover - only over cover */}
         <div
-          className="absolute inset-0 transition-all duration-300 pointer-events-none flex items-end justify-center pb-6 opacity-0 group-hover:opacity-100"
+          className="absolute inset-0 transition-all duration-300 pointer-events-none flex items-center justify-center opacity-0 group-hover:opacity-100"
           style={{
             background: 'rgba(0, 0, 0, 0.5)',
           }}
         >
-          <div className="transition-all duration-300 transform translate-y-4 group-hover:translate-y-0">
+          <div className="transition-all duration-300 transform scale-95 group-hover:scale-100">
             <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-xl px-4 py-3 shadow-2xl" style={{
               border: '2px solid rgba(139, 111, 71, 0.3)'
             }}>
