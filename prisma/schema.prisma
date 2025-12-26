@@ -61,11 +61,23 @@ model Book {
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   collections   BookCollection[]
 
+  // Single-column indexes
   @@index([userId])
   @@index([title])
   @@index([author])
   @@index([readingStatus])
   @@index([series])
+  @@index([rating])
+  @@index([dateAdded])
+  @@index([dateFinished])
+  @@index([genre])
+
+  // Composite indexes for common query patterns
+  @@index([userId, dateAdded(sort: Desc)]) // Most recent books
+  @@index([userId, readingStatus]) // Books by status
+  @@index([userId, rating]) // Books by rating
+  @@index([userId, genre]) // Books by genre
+  @@index([userId, series, seriesNumber]) // Series books in order
 }
 
 model Collection {
