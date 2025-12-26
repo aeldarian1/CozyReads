@@ -131,13 +131,17 @@ export async function importGoodreadsBooks(
           }
 
           // Enrich book data from Google Books if enabled
-          let enrichedData = {
-            coverUrl: null as string | null,
-            genre: null as string | null,
-            description: null as string | null,
-            publisher: null as string | null,
-            publishedDate: null as string | null,
-            pageCount: null as number | null,
+          let enrichedData: {
+            coverUrl: string | null;
+            genre: string | null;
+            description: string | null;
+            publisher?: string | null;
+            publishedDate?: string | null;
+            pageCount?: number | null;
+          } = {
+            coverUrl: null,
+            genre: null,
+            description: null,
           };
 
           if (options.enrichFromGoogle) {
