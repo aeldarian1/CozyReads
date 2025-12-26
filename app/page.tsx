@@ -14,6 +14,7 @@ import { Analytics } from '@/components/Analytics';
 import { QuickEditMenu } from '@/components/QuickEditMenu';
 import { CollectionsManager } from '@/components/CollectionsManager';
 import { ImportGoodreadsModal } from '@/components/ImportGoodreadsModal';
+import { BulkActionsBar } from '@/components/BulkActionsBar';
 
 export type Book = {
   id: string;
@@ -49,6 +50,7 @@ export default function Home() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [sortBy, setSortBy] = useState('dateAdded');
   const [quickEditMenu, setQuickEditMenu] = useState<{
@@ -274,6 +276,117 @@ export default function Home() {
     } catch (error) {
       console.error('Error updating book:', error);
     }
+  };
+
+  // Selection handlers
+  const toggleBookSelection = (bookId: string) => {
+    const newSelected = new Set(selectedBookIds);
+    if (newSelected.has(bookId)) {
+      newSelected.delete(bookId);
+    } else {
+      newSelected.add(bookId);
+    }
+    setSelectedBookIds(newSelected);
+  };
+
+  const selectAllBooks = () => {
+    const allIds = new Set(filteredBooks.map(book => book.id));
+    setSelectedBookIds(allIds);
+  };
+
+  const deselectAllBooks = () => {
+    setSelectedBookIds(new Set());
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedBookIds.size === filteredBooks.length && filteredBooks.length > 0) {
+      deselectAllBooks();
+    } else {
+      selectAllBooks();
+    }
+  };
+
+  // Bulk operations
+  const handleBulkDelete = async () => {
+    if (!confirm(`Delete ${selectedBookIds.size} selected books?`)) return;
+
+    try {
+      await Promise.all(
+        Array.from(selectedBookIds).map(bookId =>
+          fetch(`/api/books/${bookId}`, { method: 'DELETE' })
+        )
+      );
+      loadBooks();
+      deselectAllBooks();
+    } catch (error) {
+      console.error('Error deleting books:', error);
+    }
+  };
+
+  const handleBulkAddToCollection = async (collectionId: string) => {
+    try {
+      await fetch(`/api/collections/${collectionId}/books`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookIds: Array.from(selectedBookIds) }),
+      });
+      loadBooks();
+    } catch (error) {
+      console.error('Error adding books to collection:', error);
+    }
+  };
+
+  const handleBulkStatusChange = async (status: string) => {
+    try {
+      await Promise.all(
+        Array.from(selectedBookIds).map(bookId =>
+          fetch(`/api/books/${bookId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ readingStatus: status }),
+          })
+        )
+      );
+      loadBooks();
+    } catch (error) {
+      console.error('Error changing book status:', error);
+    }
+  };
+
+  const handleBulkExport = () => {
+    const selectedBooks = books.filter(book => selectedBookIds.has(book.id));
+    const csv = convertBooksToCSV(selectedBooks);
+    downloadFile(csv, 'cozyreads-export.csv', 'text/csv');
+  };
+
+  const convertBooksToCSV = (books: Book[]) => {
+    const headers = ['Title', 'Author', 'ISBN', 'Genre', 'Rating', 'Status', 'Review', 'Date Added', 'Date Finished'];
+    const rows = books.map(book => [
+      book.title,
+      book.author,
+      book.isbn || '',
+      book.genre || '',
+      book.rating,
+      book.readingStatus,
+      book.review || '',
+      book.dateAdded,
+      book.dateFinished || '',
+    ]);
+
+    return [
+      headers.join(','),
+      ...rows.map(row => row.map(field => `"${String(field).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+  };
+
+  const downloadFile = (content: string, filename: string, type: string) => {
+    const blob = new Blob([content], { type });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleBookRightClick = (book: Book, event: React.MouseEvent) => {
@@ -510,6 +623,8 @@ export default function Home() {
           books={filteredBooks}
           onBookClick={handleViewBook}
           onBookRightClick={handleBookRightClick}
+          selectedBookIds={selectedBookIds}
+          onBookSelect={toggleBookSelection}
         />
       </div>
 
@@ -557,6 +672,19 @@ export default function Home() {
           loadBooks();
           loadCollections();
         }}
+      />
+
+      {/* Bulk Actions Bar */}
+      <BulkActionsBar
+        selectedCount={selectedBookIds.size}
+        totalCount={filteredBooks.length}
+        onSelectAll={selectAllBooks}
+        onDeselectAll={deselectAllBooks}
+        onDelete={handleBulkDelete}
+        onAddToCollection={handleBulkAddToCollection}
+        onChangeStatus={handleBulkStatusChange}
+        onExport={handleBulkExport}
+        collections={collections}
       />
     </div>
   );

@@ -5,10 +5,14 @@ export function BookGrid({
   books,
   onBookClick,
   onBookRightClick,
+  selectedBookIds,
+  onBookSelect,
 }: {
   books: Book[];
   onBookClick: (book: Book) => void;
   onBookRightClick?: (book: Book, event: React.MouseEvent) => void;
+  selectedBookIds?: Set<string>;
+  onBookSelect?: (bookId: string) => void;
 }) {
   if (books.length === 0) {
     return (
@@ -46,6 +50,8 @@ export function BookGrid({
             book={book}
             onClick={() => onBookClick(book)}
             onRightClick={onBookRightClick ? (e) => onBookRightClick(book, e) : undefined}
+            isSelected={selectedBookIds?.has(book.id)}
+            onSelect={onBookSelect}
           />
         </div>
       ))}

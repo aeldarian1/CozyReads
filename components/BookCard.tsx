@@ -23,11 +23,15 @@ const genreColors: { [key: string]: { bg: string; text: string } } = {
 export function BookCard({
   book,
   onClick,
-  onRightClick
+  onRightClick,
+  isSelected = false,
+  onSelect
 }: {
   book: Book;
   onClick: () => void;
   onRightClick?: (event: React.MouseEvent) => void;
+  isSelected?: boolean;
+  onSelect?: (bookId: string) => void;
 }) {
   const statusStyles = {
     'Want to Read': { bg: '#6d8a96', emoji: '📚' },
@@ -92,6 +96,30 @@ export function BookCard({
         transform: 'translateX(-100%)',
         animation: 'shine 3s ease-in-out infinite'
       }} />
+
+      {/* Selection Checkbox */}
+      {onSelect && (
+        <div
+          className={`absolute top-3 right-3 z-20 transition-all duration-200 ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 group-hover:opacity-100 scale-90 group-hover:scale-100'}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect(book.id);
+          }}
+        >
+          <div
+            className="w-6 h-6 rounded-md flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-110"
+            style={{
+              background: isSelected ? 'var(--gradient-accent)' : 'rgba(255, 255, 255, 0.9)',
+              border: '2px solid var(--warm-brown)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            {isSelected && (
+              <span className="text-white font-bold text-sm">✓</span>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="relative overflow-hidden">
         {book.coverUrl ? (
