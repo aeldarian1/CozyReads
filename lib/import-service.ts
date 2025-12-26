@@ -108,6 +108,28 @@ export async function importGoodreadsBooks(
             return;
           }
 
+          // Validate required fields before import
+          // Skip books missing: ISBN, rating (>0)
+          if (!book.isbn || book.isbn.trim() === '') {
+            result.skipped++;
+            result.errors.push({
+              row: rowNumber,
+              book: book.title,
+              error: 'Missing required field: ISBN',
+            });
+            return;
+          }
+
+          if (book.rating === 0) {
+            result.skipped++;
+            result.errors.push({
+              row: rowNumber,
+              book: book.title,
+              error: 'Missing required field: Rating',
+            });
+            return;
+          }
+
           // Enrich book data from Google Books if enabled
           let enrichedData = {
             coverUrl: null as string | null,
@@ -128,6 +150,18 @@ export async function importGoodreadsBooks(
             }
           }
 
+          // Final validation: Check if description is available after enrichment
+          const finalDescription = enrichedData.description || book.review;
+          if (!finalDescription || finalDescription.trim() === '') {
+            result.skipped++;
+            result.errors.push({
+              row: rowNumber,
+              book: book.title,
+              error: 'Missing required field: Description (no review or enriched description available)',
+            });
+            return;
+          }
+
           // Use transaction to ensure atomicity
           await prisma.$transaction(async (tx) => {
             // Create book
@@ -138,7 +172,7 @@ export async function importGoodreadsBooks(
                 author: book.author,
                 isbn: book.isbn,
                 genre: enrichedData.genre || book.genre,
-                description: enrichedData.description,
+                description: finalDescription,
                 coverUrl: enrichedData.coverUrl,
                 rating: book.rating,
                 review: book.review,
