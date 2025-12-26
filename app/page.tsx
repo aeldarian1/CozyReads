@@ -123,7 +123,7 @@ export default function Home() {
 
   const loadBooks = async () => {
     try {
-      const response = await fetch('/api/books');
+      const response = await fetch('/api/books?limit=1000'); // Load all books for client-side filtering
       if (!response.ok) {
         if (response.status === 401) {
           // User not authenticated, will be redirected by middleware
@@ -131,11 +131,15 @@ export default function Home() {
         }
         throw new Error(`Failed to load books: ${response.status}`);
       }
-      const data = await response.json();
-      if (Array.isArray(data)) {
-        setBooks(data);
+      const result = await response.json();
+
+      // Handle both old array format and new paginated format
+      if (Array.isArray(result)) {
+        setBooks(result);
+      } else if (result.data && Array.isArray(result.data)) {
+        setBooks(result.data);
       } else {
-        console.error('Books data is not an array:', data);
+        console.error('Books data is not an array:', result);
         setBooks([]);
       }
     } catch (error) {
