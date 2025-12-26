@@ -484,9 +484,7 @@ export default function Home() {
           onDelete={() => {
             handleDeleteBook(quickEditMenu.book.id);
           }}
-          onQuickUpdate={(updates) => {
-            handleQuickUpdate(quickEditMenu.book.id, updates);
-          }}
+          onQuickUpdate={(updates) => handleQuickUpdate(quickEditMenu.book.id, updates)}
         />
       )}
     </div>
