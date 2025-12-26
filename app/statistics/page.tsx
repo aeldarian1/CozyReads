@@ -105,18 +105,42 @@ export default function StatisticsPage() {
                 Track your reading journey and insights
               </p>
             </div>
-            <button
-              onClick={() => router.push('/')}
-              className="px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
-              style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                color: '#fff',
-                border: '2px solid rgba(255, 255, 255, 0.3)',
-                backdropFilter: 'blur(10px)',
-              }}
-            >
-              ← Back to Library
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => window.location.href = '/api/export?format=json'}
+                className="px-4 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #d4a574 0%, #c89b65 100%)',
+                  color: '#2d1f15',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                }}
+              >
+                📥 Export JSON
+              </button>
+              <button
+                onClick={() => window.location.href = '/api/export?format=csv'}
+                className="px-4 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl text-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #6d8a96 0%, #5d7052 100%)',
+                  color: '#fff',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                }}
+              >
+                📊 Export CSV
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                className="px-6 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg hover:shadow-xl"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  color: '#fff',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  backdropFilter: 'blur(10px)',
+                }}
+              >
+                ← Back
+              </button>
+            </div>
           </div>
         </div>
       </div>
