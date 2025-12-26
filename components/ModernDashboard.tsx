@@ -2,6 +2,7 @@
 
 import { Book } from '@/lib/hooks/useBooks';
 import { BookOpen, CheckCircle2, BookMarked, Flame } from 'lucide-react';
+import { useCountUp } from '@/lib/hooks/useCountUp';
 
 interface ModernDashboardProps {
   currentlyReading: Book[];
@@ -23,24 +24,28 @@ export function ModernDashboard({ currentlyReading, stats }: ModernDashboardProp
           value={stats.totalBooks}
           Icon={BookOpen}
           gradient="from-blue-500 to-cyan-500"
+          delay={0}
         />
         <StatCard
           label="Books Read"
           value={stats.booksRead}
           Icon={CheckCircle2}
           gradient="from-green-500 to-emerald-500"
+          delay={100}
         />
         <StatCard
           label="Pages Read"
           value={stats.pagesRead}
           Icon={BookMarked}
           gradient="from-purple-500 to-pink-500"
+          delay={200}
         />
         <StatCard
           label="Day Streak"
           value={stats.currentStreak}
           Icon={Flame}
           gradient="from-orange-500 to-red-500"
+          delay={300}
         />
       </div>
 
@@ -67,19 +72,24 @@ function StatCard({
   value,
   Icon,
   gradient,
+  delay = 0,
 }: {
   label: string;
   value: number | string;
   Icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
   gradient: string;
+  delay?: number;
 }) {
-  const displayValue = typeof value === 'number' ? value.toLocaleString() : value;
+  const numericValue = typeof value === 'number' ? value : parseInt(value.toString().replace(/,/g, ''), 10) || 0;
+  const animatedValue = useCountUp(numericValue, 1200, delay);
+  const displayValue = typeof value === 'string' ? value : animatedValue.toLocaleString();
 
   return (
     <div
-      className="rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer"
+      className="rounded-2xl p-6 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer animate-fadeIn"
       style={{
         background: `linear-gradient(135deg, var(--${gradient}))`,
+        animationDelay: `${delay}ms`,
       }}
     >
       <div className="flex items-center justify-between mb-2">
