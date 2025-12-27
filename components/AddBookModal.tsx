@@ -35,6 +35,8 @@ export function AddBookModal({
   const [apiResults, setApiResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [isEnriching, setIsEnriching] = useState(false);
+  const [enrichMessage, setEnrichMessage] = useState('');
 
   const [collections, setCollections] = useState<any[]>([]);
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
@@ -146,6 +148,53 @@ export function AddBookModal({
     });
     setApiResults([]);
     setApiSearch('');
+  };
+
+  const handleEnrich = async () => {
+    if (!formData.title || !formData.author) {
+      setEnrichMessage('⚠️ Please enter title and author first');
+      setTimeout(() => setEnrichMessage(''), 3000);
+      return;
+    }
+
+    setIsEnriching(true);
+    setEnrichMessage('🔍 Fetching book data...');
+
+    try {
+      const response = await fetch('/api/enrich-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: formData.title,
+          author: formData.author,
+          isbn: formData.isbn || null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Enrichment failed');
+      }
+
+      const enriched = await response.json();
+
+      // Merge enriched data with existing form data (don't overwrite user input)
+      setFormData({
+        ...formData,
+        coverUrl: enriched.coverUrl || formData.coverUrl,
+        description: enriched.description || formData.description,
+        genre: enriched.genre || formData.genre,
+        totalPages: enriched.totalPages?.toString() || formData.totalPages,
+      });
+
+      setEnrichMessage('✅ Book data enriched successfully!');
+      setTimeout(() => setEnrichMessage(''), 3000);
+    } catch (error) {
+      console.error('Enrichment error:', error);
+      setEnrichMessage('❌ Enrichment failed. Try searching instead.');
+      setTimeout(() => setEnrichMessage(''), 4000);
+    } finally {
+      setIsEnriching(false);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -444,6 +493,45 @@ export function AddBookModal({
               />
             </div>
 
+            <div className="flex items-end">
+              <button
+                type="button"
+                onClick={handleEnrich}
+                disabled={isEnriching || !formData.title || !formData.author}
+                className="w-full px-4 py-3 rounded-xl font-bold transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  background: isEnriching
+                    ? 'linear-gradient(135deg, #9ca3af 0%, #6b7280 100%)'
+                    : 'linear-gradient(135deg, #c9a961 0%, #d4a574 50%, #c89b65 100%)',
+                  color: '#2d1f15',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  boxShadow: '0 4px 12px rgba(201, 169, 97, 0.3)'
+                }}
+              >
+                {isEnriching ? '🔄 Enriching...' : '🔍 Auto-Enrich'}
+              </button>
+            </div>
+          </div>
+
+          {/* Enrichment message */}
+          {enrichMessage && (
+            <div className="mb-4 p-3 rounded-xl text-sm font-semibold text-center animate-fadeIn" style={{
+              background: enrichMessage.includes('✅')
+                ? 'rgba(34, 197, 94, 0.1)'
+                : enrichMessage.includes('❌')
+                  ? 'rgba(239, 68, 68, 0.1)'
+                  : 'rgba(59, 130, 246, 0.1)',
+              color: enrichMessage.includes('✅')
+                ? '#15803d'
+                : enrichMessage.includes('❌')
+                  ? '#b91c1c'
+                  : '#1e40af',
+            }}>
+              {enrichMessage}
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-4 mb-4">
             <div>
               <label className="block font-bold mb-2 tracking-wide uppercase text-xs" style={{ color: 'var(--text-dark)' }}>
                 Genre
