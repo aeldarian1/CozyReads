@@ -147,14 +147,16 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
           transformStyle: 'preserve-3d',
         }}
       >
-        {/* Enhanced spine highlight */}
+        {/* Enhanced spine highlight - left edge */}
         <div
-          className="absolute left-0 top-0 bottom-0 w-1"
+          className="absolute left-0 top-0 bottom-0"
           style={{
-            background: `linear-gradient(to bottom,
-              ${isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.4)'} 0%,
-              transparent 50%,
-              ${isDark ? 'rgba(0, 0, 0, 0.1)' : 'rgba(0, 0, 0, 0.05)'} 100%)`,
+            width: '6px',
+            background: `linear-gradient(to right,
+              ${bookColor}dd 0%,
+              ${bookColor}aa 50%,
+              transparent 100%)`,
+            boxShadow: `inset 2px 0 4px rgba(255, 215, 0, 0.3)`,
           }}
         />
 

@@ -76,17 +76,19 @@ export function Shelf({ books, bookColors, onBookClick, label, highlightedBookId
 
       {/* Modern 3D Shelf Container with enhanced styling */}
       <div
-        className="relative rounded-2xl overflow-visible shadow-2xl group"
+        className="relative overflow-visible shadow-2xl group"
         style={{
           background: 'linear-gradient(to bottom, rgba(139, 111, 71, 0.08), rgba(139, 111, 71, 0.12))',
           border: '1px solid rgba(139, 111, 71, 0.2)',
+          borderRadius: '0 16px 16px 0',
           transformStyle: 'preserve-3d',
           backdropFilter: 'blur(10px)',
         }}
       >
         {/* Enhanced 3D Back Wall */}
-        <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
+        <div className="absolute inset-0 pointer-events-none" style={{
           background: 'linear-gradient(to bottom, rgba(30, 30, 30, 0.05) 0%, rgba(30, 30, 30, 0.1) 100%)',
+          borderRadius: '0 16px 16px 0',
           transform: 'translateZ(-10px)',
           boxShadow: 'inset 0 4px 12px rgba(0, 0, 0, 0.08)',
         }} />
@@ -94,8 +96,8 @@ export function Shelf({ books, bookColors, onBookClick, label, highlightedBookId
         {/* Books Container with 3D depth */}
         <div className="flex items-end gap-1 pt-6 pb-0 overflow-x-auto scrollbar-thin relative" style={{
           minHeight: '180px',
-          paddingLeft: '32px',
-          paddingRight: '32px',
+          paddingLeft: '20px',
+          paddingRight: '20px',
           background: 'linear-gradient(to bottom, transparent 0%, rgba(139, 111, 71, 0.02) 100%)',
           transformStyle: 'preserve-3d',
           overflowY: 'visible',
