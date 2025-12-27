@@ -55,9 +55,9 @@ export function VirtualizedBookGrid({ books, onBookClick, onBookUpdate, onAddToC
   }
 
   // Calculate grid dimensions
-  const cardWidth = 280;
-  const cardHeight = 450;
-  const gap = 24;
+  const cardWidth = 340;
+  const cardHeight = 510;
+  const gap = 28;
   const columnCount = Math.max(1, Math.floor(dimensions.width / (cardWidth + gap)));
   const rowCount = Math.max(1, Math.ceil(books.length / columnCount));
 
