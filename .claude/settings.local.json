@@ -27,7 +27,10 @@
       "Bash(git add:*)",
       "Bash(tasklist:*)",
       "Bash(findstr:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(cmd /c \"taskkill /F /PID 18640\")",
+      "Bash(Stop-Process -Id 18640 -Force)"
     ]
   }
 }

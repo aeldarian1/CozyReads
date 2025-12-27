@@ -42,29 +42,38 @@ export function QuoteCard({ quote, onUpdate, onDelete, onEdit, showBookInfo = fa
 
   return (
     <div
-      className="group relative rounded-2xl p-6 transition-all duration-300 hover:shadow-2xl"
+      className="group relative rounded-2xl p-6 transition-all duration-300 hover:shadow-xl"
       style={{
-        background: 'var(--gradient-card)',
-        border: '2px solid var(--border-color)',
+        background: 'linear-gradient(135deg, rgba(249, 247, 243, 0.6) 0%, rgba(252, 250, 248, 0.8) 100%)',
+        border: '2px solid rgba(139, 111, 71, 0.2)',
         transform: isHovered ? 'translateY(-2px)' : 'translateY(0)',
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Decorative quote mark */}
+      <div
+        className="absolute top-4 left-4 opacity-10"
+        style={{
+          fontSize: '80px',
+          lineHeight: '1',
+          fontFamily: 'Playfair Display, serif',
+          color: '#8b6f47',
+          fontWeight: 'bold',
+        }}
+      >
+        "
+      </div>
+
       {/* Header with page number and actions */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 relative z-10">
         <div className="flex items-center gap-2">
-          <Quote
-            className="w-5 h-5"
-            style={{ color: 'var(--warm-brown)' }}
-            strokeWidth={2.5}
-          />
           {quote.pageNumber && (
             <span
-              className="text-xs font-bold px-3 py-1 rounded-full"
+              className="text-xs font-bold px-3 py-1.5 rounded-full shadow-sm"
               style={{
-                background: 'var(--warm-brown)',
-                color: 'white',
+                background: 'linear-gradient(135deg, #c9a961 0%, #d4a574 100%)',
+                color: '#2d1f15',
               }}
             >
               Page {quote.pageNumber}
@@ -78,13 +87,13 @@ export function QuoteCard({ quote, onUpdate, onDelete, onEdit, showBookInfo = fa
             onClick={handleToggleFavorite}
             className="p-2 rounded-lg transition-all hover:scale-110"
             style={{
-              background: quote.isFavorite ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-tertiary)',
+              background: quote.isFavorite ? 'rgba(239, 68, 68, 0.15)' : 'rgba(139, 111, 71, 0.1)',
             }}
             title={quote.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
           >
             <Heart
               className="w-4 h-4"
-              style={{ color: quote.isFavorite ? '#ef4444' : 'var(--text-muted)' }}
+              style={{ color: quote.isFavorite ? '#ef4444' : '#8b6f47' }}
               fill={quote.isFavorite ? '#ef4444' : 'none'}
               strokeWidth={2}
             />
@@ -94,10 +103,10 @@ export function QuoteCard({ quote, onUpdate, onDelete, onEdit, showBookInfo = fa
             <button
               onClick={() => onEdit(quote)}
               className="p-2 rounded-lg transition-all hover:scale-110"
-              style={{ background: 'var(--bg-tertiary)' }}
+              style={{ background: 'rgba(139, 111, 71, 0.1)' }}
               title="Edit quote"
             >
-              <Edit2 className="w-4 h-4" style={{ color: 'var(--text-muted)' }} strokeWidth={2} />
+              <Edit2 className="w-4 h-4" style={{ color: '#8b6f47' }} strokeWidth={2} />
             </button>
           )}
 
@@ -105,7 +114,7 @@ export function QuoteCard({ quote, onUpdate, onDelete, onEdit, showBookInfo = fa
             <button
               onClick={handleDelete}
               className="p-2 rounded-lg transition-all hover:scale-110"
-              style={{ background: 'rgba(239, 68, 68, 0.1)' }}
+              style={{ background: 'rgba(239, 68, 68, 0.15)' }}
               title="Delete quote"
             >
               <Trash2 className="w-4 h-4" style={{ color: '#ef4444' }} strokeWidth={2} />
@@ -115,30 +124,35 @@ export function QuoteCard({ quote, onUpdate, onDelete, onEdit, showBookInfo = fa
       </div>
 
       {/* Quote text */}
-      <blockquote className="mb-4">
+      <blockquote className="mb-4 relative z-10">
         <p
-          className="text-lg leading-relaxed italic"
+          className="text-xl leading-relaxed"
           style={{
-            color: 'var(--text-dark)',
+            color: '#2d1f15',
             fontFamily: 'Playfair Display, serif',
+            fontStyle: 'italic',
+            fontWeight: '500',
           }}
         >
-          "{quote.text}"
+          {quote.text}
         </p>
       </blockquote>
 
       {/* Notes */}
       {quote.notes && (
         <div
-          className="mb-4 p-4 rounded-xl"
+          className="mb-4 p-4 rounded-xl relative z-10"
           style={{
-            background: 'var(--bg-tertiary)',
-            borderLeft: '4px solid var(--warm-brown)',
+            background: 'rgba(201, 169, 97, 0.08)',
+            borderLeft: '4px solid #c9a961',
           }}
         >
-          <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-            {quote.notes}
-          </p>
+          <div className="flex items-start gap-2">
+            <BookMarked className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: '#8b6f47' }} strokeWidth={2} />
+            <p className="text-sm font-medium leading-relaxed" style={{ color: '#5d4e37' }}>
+              {quote.notes}
+            </p>
+          </div>
         </div>
       )}
 

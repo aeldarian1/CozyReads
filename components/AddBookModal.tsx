@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Book } from '@/app/page';
+import { validateISBN, formatISBN } from '@/lib/validation';
+import { AlertCircle, CheckCircle, AlertTriangle, BookCheck } from 'lucide-react';
 
 export function AddBookModal({
   isOpen,
@@ -40,6 +42,24 @@ export function AddBookModal({
 
   const [collections, setCollections] = useState<any[]>([]);
   const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
+
+  // Validation states
+  const [validationErrors, setValidationErrors] = useState<{
+    title?: string;
+    author?: string;
+    isbn?: string;
+  }>({});
+  const [isbnValidation, setIsbnValidation] = useState<{
+    valid: boolean;
+    type: string | null;
+    message: string;
+  } | null>(null);
+  const [duplicateCheck, setDuplicateCheck] = useState<{
+    checking: boolean;
+    exists: boolean;
+    book: any;
+  }>({ checking: false, exists: false, book: null });
+  const [showEnrichSuggestion, setShowEnrichSuggestion] = useState(false);
 
   // Load collections
   useEffect(() => {
@@ -197,8 +217,84 @@ export function AddBookModal({
     }
   };
 
+  // ISBN validation and duplicate checking
+  const checkISBN = async (isbn: string) => {
+    if (!isbn.trim()) {
+      setIsbnValidation(null);
+      setDuplicateCheck({ checking: false, exists: false, book: null });
+      return;
+    }
+
+    // Validate ISBN format
+    const validation = validateISBN(isbn);
+    setIsbnValidation(validation);
+
+    // Check for duplicates if ISBN is valid
+    if (validation.valid) {
+      setDuplicateCheck({ checking: true, exists: false, book: null });
+      try {
+        const response = await fetch('/api/check-duplicate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            isbn,
+            excludeId: editingBook?.id || null,
+          }),
+        });
+        const data = await response.json();
+        setDuplicateCheck({
+          checking: false,
+          exists: data.exists,
+          book: data.book,
+        });
+
+        // Suggest enrichment if no duplicate and fields are empty
+        if (!data.exists && (!formData.description || !formData.coverUrl)) {
+          setShowEnrichSuggestion(true);
+          setTimeout(() => setShowEnrichSuggestion(false), 5000);
+        }
+      } catch (error) {
+        console.error('Duplicate check error:', error);
+        setDuplicateCheck({ checking: false, exists: false, book: null });
+      }
+    }
+  };
+
+  // Validate form before submission
+  const validateForm = (): boolean => {
+    const errors: any = {};
+
+    if (!formData.title.trim()) {
+      errors.title = 'Title is required';
+    }
+
+    if (!formData.author.trim()) {
+      errors.author = 'Author is required';
+    }
+
+    if (formData.isbn && isbnValidation && !isbnValidation.valid) {
+      errors.isbn = isbnValidation.message;
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
+    // Warn if duplicate exists
+    if (duplicateCheck.exists) {
+      if (!confirm(`A book with this ISBN already exists in your library:\n"${duplicateCheck.book.title}" by ${duplicateCheck.book.author}\n\nDo you want to add it anyway?`)) {
+        return;
+      }
+    }
+
     const dataToSave = {
       ...formData,
       currentPage: formData.currentPage ? parseInt(formData.currentPage) : null,
@@ -442,55 +538,160 @@ export function AddBookModal({
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block font-bold mb-2 tracking-wide uppercase text-xs" style={{ color: 'var(--text-dark)' }}>
-                Title *
+                Title <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, title: e.target.value });
+                  if (validationErrors.title) {
+                    setValidationErrors({ ...validationErrors, title: undefined });
+                  }
+                }}
                 className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--border-color)',
+                  borderColor: validationErrors.title ? '#ef4444' : 'var(--border-color)',
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-dark)'
                 }}
               />
+              {validationErrors.title && (
+                <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {validationErrors.title}
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block font-bold mb-2 tracking-wide uppercase text-xs" style={{ color: 'var(--text-dark)' }}>
-                Author *
+                Author <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 required
                 value={formData.author}
-                onChange={(e) => setFormData({ ...formData, author: e.target.value })}
+                onChange={(e) => {
+                  setFormData({ ...formData, author: e.target.value });
+                  if (validationErrors.author) {
+                    setValidationErrors({ ...validationErrors, author: undefined });
+                  }
+                }}
                 className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all"
                 style={{
-                  borderColor: 'var(--border-color)',
+                  borderColor: validationErrors.author ? '#ef4444' : 'var(--border-color)',
                   background: 'var(--bg-secondary)',
                   color: 'var(--text-dark)'
                 }}
               />
+              {validationErrors.author && (
+                <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {validationErrors.author}
+                </p>
+              )}
             </div>
 
             <div>
-              <label className="block font-bold mb-2 tracking-wide uppercase text-xs" style={{ color: 'var(--text-dark)' }}>
+              <label className="block font-bold mb-2 tracking-wide uppercase text-xs flex items-center gap-2" style={{ color: 'var(--text-dark)' }}>
                 ISBN
+                <span className="text-xs font-normal normal-case" style={{ color: '#8b6f47' }}>(Optional but recommended)</span>
               </label>
-              <input
-                type="text"
-                value={formData.isbn}
-                onChange={(e) => setFormData({ ...formData, isbn: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all"
-                style={{
-                  borderColor: 'var(--border-color)',
-                  background: 'var(--bg-secondary)',
-                  color: 'var(--text-dark)'
-                }}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  value={formData.isbn}
+                  onChange={(e) => {
+                    setFormData({ ...formData, isbn: e.target.value });
+                    setIsbnValidation(null);
+                    setDuplicateCheck({ checking: false, exists: false, book: null });
+                  }}
+                  onBlur={(e) => checkISBN(e.target.value)}
+                  placeholder="978-0-123456-78-9 or 0123456789"
+                  className="w-full px-4 py-3 pr-12 rounded-xl border-2 focus:outline-none focus:ring-2 transition-all"
+                  style={{
+                    borderColor: isbnValidation
+                      ? (isbnValidation.valid ? '#10b981' : '#ef4444')
+                      : validationErrors.isbn
+                      ? '#ef4444'
+                      : 'var(--border-color)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-dark)'
+                  }}
+                />
+                {/* Validation icon */}
+                {duplicateCheck.checking && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-gray-600"></div>
+                  </div>
+                )}
+                {!duplicateCheck.checking && isbnValidation && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {isbnValidation.valid ? (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-red-500" />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* ISBN Validation Messages */}
+              {isbnValidation && (
+                <div className={`mt-2 p-3 rounded-lg flex items-start gap-2 ${isbnValidation.valid ? 'bg-green-50' : 'bg-red-50'}`}>
+                  {isbnValidation.valid ? (
+                    <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-green-600" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-600" />
+                  )}
+                  <p className={`text-sm font-medium ${isbnValidation.valid ? 'text-green-700' : 'text-red-700'}`}>
+                    {isbnValidation.message}
+                    {isbnValidation.valid && isbnValidation.type && (
+                      <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-green-100">
+                        {isbnValidation.type}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              )}
+
+              {/* Duplicate Warning */}
+              {duplicateCheck.exists && duplicateCheck.book && (
+                <div className="mt-2 p-3 rounded-lg bg-amber-50 border-2 border-amber-200">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 mt-0.5 flex-shrink-0 text-amber-600" />
+                    <div>
+                      <p className="text-sm font-bold text-amber-800 mb-1">
+                        Duplicate Detected!
+                      </p>
+                      <p className="text-sm text-amber-700">
+                        You already have "{duplicateCheck.book.title}" by {duplicateCheck.book.author} in your library.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Enrichment Suggestion */}
+              {showEnrichSuggestion && !duplicateCheck.exists && (
+                <div className="mt-2 p-3 rounded-lg bg-blue-50 border-2 border-blue-200 animate-pulse">
+                  <div className="flex items-start gap-2">
+                    <BookCheck className="w-5 h-5 mt-0.5 flex-shrink-0 text-blue-600" />
+                    <p className="text-sm text-blue-700">
+                      <span className="font-bold">Valid ISBN detected!</span> Try the Auto-Enrich button below to automatically fill in book details.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {validationErrors.isbn && (
+                <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {validationErrors.isbn}
+                </p>
+              )}
             </div>
 
             <div className="flex items-end">

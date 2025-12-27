@@ -2,7 +2,7 @@
 
 import { Book } from '@/app/page';
 import { useState, memo } from 'react';
-import { BookOpen, Star } from 'lucide-react';
+import { BookOpen, Star, CheckCircle, Circle } from 'lucide-react';
 import { QuickActions } from './QuickActions';
 import Image from 'next/image';
 
@@ -11,9 +11,18 @@ interface ModernBookCardProps {
   onClick?: () => void;
   onUpdate?: (updates: Partial<Book>) => void;
   onAddToCollection?: (bookId: string) => void;
+  isSelectionMode?: boolean;
+  isSelected?: boolean;
 }
 
-export const ModernBookCard = memo(function ModernBookCard({ book, onClick, onUpdate, onAddToCollection }: ModernBookCardProps) {
+export const ModernBookCard = memo(function ModernBookCard({
+  book,
+  onClick,
+  onUpdate,
+  onAddToCollection,
+  isSelectionMode = false,
+  isSelected = false
+}: ModernBookCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
 
@@ -48,13 +57,47 @@ export const ModernBookCard = memo(function ModernBookCard({ book, onClick, onUp
       className="group relative rounded-2xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 cursor-pointer"
       style={{
         background: 'var(--bg-secondary)',
-        border: '1px solid var(--border-color)',
+        border: isSelected
+          ? '3px solid #3b82f6'
+          : isSelectionMode
+          ? '2px solid rgba(59, 130, 246, 0.3)'
+          : '1px solid var(--border-color)',
         transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
+        boxShadow: isSelected
+          ? '0 0 0 4px rgba(59, 130, 246, 0.1), 0 10px 30px rgba(59, 130, 246, 0.2)'
+          : undefined,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={onClick}
     >
+      {/* Selection Checkbox Overlay */}
+      {isSelectionMode && (
+        <div
+          className="absolute top-3 left-3 z-20"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClick?.();
+          }}
+        >
+          <div
+            className="rounded-full p-1 backdrop-blur-md transition-all duration-200"
+            style={{
+              background: isSelected
+                ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                : 'rgba(0, 0, 0, 0.5)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+            }}
+          >
+            {isSelected ? (
+              <CheckCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
+            ) : (
+              <Circle className="w-6 h-6 text-white" strokeWidth={2} />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Book Cover */}
       <div className="relative aspect-[2/3] overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
         {book.coverUrl ? (

@@ -51,8 +51,9 @@ export interface ParsedBook {
 
 export async function parseGoodreadsCSV(
   fileContent: string
-): Promise<{ books: ParsedBook[]; errors: string[] }> {
+): Promise<{ books: ParsedBook[]; errors: string[]; warnings: string[] }> {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const books: ParsedBook[] = [];
 
   return new Promise((resolve) => {
@@ -62,10 +63,44 @@ export async function parseGoodreadsCSV(
       complete: (results) => {
         results.data.forEach((row, index) => {
           try {
-            // Skip rows without essential data
-            if (!row['Title'] || !row['Author']) {
-              errors.push(`Row ${index + 1}: Missing title or author`);
+            // Helper to clean Excel text formatting
+            const cleanExcelText = (value: string): string => {
+              if (!value) return '';
+              const trimmed = value.trim();
+              if (trimmed.startsWith('="') && trimmed.endsWith('"')) {
+                return trimmed.slice(2, -1);
+              }
+              return trimmed;
+            };
+
+            // Check for REQUIRED fields (blocking)
+            const missingRequiredFields: string[] = [];
+
+            if (!row['Title'] || row['Title'].trim() === '') {
+              missingRequiredFields.push('title');
+            }
+
+            if (!row['Author'] || row['Author'].trim() === '') {
+              missingRequiredFields.push('author');
+            }
+
+            // Skip rows without required fields
+            if (missingRequiredFields.length > 0) {
+              errors.push(
+                `Row ${index + 1}: Missing required field${missingRequiredFields.length > 1 ? 's' : ''}: ${missingRequiredFields.join(', ')} - Skipped`
+              );
               return;
+            }
+
+            // Check for ISBN (optional but recommended)
+            const isbn13 = row['ISBN13'] ? cleanExcelText(row['ISBN13']) : '';
+            const isbn10 = row['ISBN'] ? cleanExcelText(row['ISBN']) : '';
+            const hasISBN = isbn13 !== '' || isbn10 !== '';
+
+            if (!hasISBN) {
+              warnings.push(
+                `Row ${index + 1}: "${row['Title']}" by ${row['Author']} - No ISBN found (data enrichment may be limited)`
+              );
             }
 
             const parsedBook = mapGoodreadsToCozyReads(row);
@@ -77,11 +112,11 @@ export async function parseGoodreadsCSV(
           }
         });
 
-        resolve({ books, errors });
+        resolve({ books, errors, warnings });
       },
       error: (error: Error) => {
         errors.push(`CSV parsing error: ${error.message}`);
-        resolve({ books, errors });
+        resolve({ books, errors, warnings });
       },
     });
   });

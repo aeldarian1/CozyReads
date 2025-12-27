@@ -18,16 +18,28 @@ import {
   Settings as SettingsIcon,
   Menu,
   X,
-  Keyboard
+  Keyboard,
+  CheckSquare,
+  Square
 } from 'lucide-react';
 
 interface ModernNavigationProps {
   onAddBook: () => void;
   onImport: () => void;
   onShowShortcuts: () => void;
+  isSelectionMode?: boolean;
+  onToggleSelectionMode?: () => void;
+  selectedCount?: number;
 }
 
-export function ModernNavigation({ onAddBook, onImport, onShowShortcuts }: ModernNavigationProps) {
+export function ModernNavigation({
+  onAddBook,
+  onImport,
+  onShowShortcuts,
+  isSelectionMode = false,
+  onToggleSelectionMode,
+  selectedCount = 0
+}: ModernNavigationProps) {
   const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -120,6 +132,30 @@ export function ModernNavigation({ onAddBook, onImport, onShowShortcuts }: Moder
             <Download className="w-5 h-5" strokeWidth={2} />
             <span>Import Books</span>
           </button>
+
+          {onToggleSelectionMode && pathname === '/' && (
+            <button
+              onClick={onToggleSelectionMode}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 hover:scale-105"
+              style={{
+                background: isSelectionMode
+                  ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)'
+                  : 'var(--bg-tertiary)',
+                color: isSelectionMode ? '#fff' : 'var(--text-dark)',
+                fontWeight: isSelectionMode ? '700' : '600',
+                boxShadow: isSelectionMode ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none',
+              }}
+            >
+              {isSelectionMode ? (
+                <CheckSquare className="w-5 h-5" strokeWidth={2} />
+              ) : (
+                <Square className="w-5 h-5" strokeWidth={2} />
+              )}
+              <span className="flex-1 text-left">
+                {isSelectionMode ? `Selected (${selectedCount})` : 'Select Books'}
+              </span>
+            </button>
+          )}
         </nav>
 
         {/* Bottom Actions */}

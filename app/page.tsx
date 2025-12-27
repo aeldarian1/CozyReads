@@ -15,6 +15,7 @@ import { AddBookModal } from '@/components/AddBookModal';
 import { ViewBookModal } from '@/components/ViewBookModal';
 import { QuickEditMenu } from '@/components/QuickEditMenu';
 import { ImportGoodreadsModal } from '@/components/ImportGoodreadsModal';
+import { AdvancedImportModal } from '@/components/AdvancedImportModal';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { BulkEnrichment } from '@/components/BulkEnrichment';
@@ -59,6 +60,7 @@ export default function Home() {
   const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
   const [sortBy, setSortBy] = useState('dateAdded');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
@@ -335,48 +337,107 @@ export default function Home() {
 
   // Bulk operations
   const handleBulkDelete = async () => {
-    if (!confirm(`Delete ${selectedBookIds.size} selected books?`)) return;
+    // Filter out any IDs that don't exist in current books
+    const validBookIds = Array.from(selectedBookIds).filter(id =>
+      books.some(book => book.id === id)
+    );
+
+    if (validBookIds.length === 0) {
+      alert('No valid books selected for deletion.');
+      deselectAllBooks();
+      return;
+    }
+
+    if (!confirm(`Delete ${validBookIds.length} selected books?`)) return;
 
     try {
-      await Promise.all(
-        Array.from(selectedBookIds).map(bookId =>
-          fetch(`/api/books/${bookId}`, { method: 'DELETE' })
-        )
-      );
+      const deletePromises = validBookIds.map(async (bookId) => {
+        const response = await fetch(`/api/books/${bookId}`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`Failed to delete book ${bookId}: ${error.error || response.statusText}`);
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(deletePromises);
       loadBooks();
       deselectAllBooks();
+      setIsSelectionMode(false);
     } catch (error) {
       console.error('Error deleting books:', error);
+      alert(`Failed to delete some books: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Reload books to sync state with server
+      loadBooks();
     }
   };
 
   const handleBulkAddToCollection = async (collectionId: string) => {
     try {
-      await fetch(`/api/collections/${collectionId}/books`, {
+      const response = await fetch(`/api/collections/${collectionId}/books`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bookIds: Array.from(selectedBookIds) }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to add books to collection');
+      }
+
       loadBooks();
+      deselectAllBooks();
+      setIsSelectionMode(false);
     } catch (error) {
       console.error('Error adding books to collection:', error);
+      alert(`Failed to add books to collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
   const handleBulkStatusChange = async (status: string) => {
+    // Filter out any IDs that don't exist in current books
+    const validBookIds = Array.from(selectedBookIds).filter(id =>
+      books.some(book => book.id === id)
+    );
+
+    if (validBookIds.length === 0) {
+      alert('No valid books selected for status change.');
+      deselectAllBooks();
+      return;
+    }
+
     try {
-      await Promise.all(
-        Array.from(selectedBookIds).map(bookId =>
-          fetch(`/api/books/${bookId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ readingStatus: status }),
-          })
-        )
-      );
+      const updatePromises = validBookIds.map(async (bookId) => {
+        const response = await fetch(`/api/books/${bookId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ readingStatus: status }),
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(`Failed to update book ${bookId}: ${error.error || response.statusText}`);
+        }
+
+        return response.json();
+      });
+
+      await Promise.all(updatePromises);
       loadBooks();
+      deselectAllBooks();
+      setIsSelectionMode(false);
     } catch (error) {
       console.error('Error changing book status:', error);
+      alert(`Failed to change book status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Reload books to sync state with server
+      loadBooks();
     }
   };
 
@@ -528,6 +589,15 @@ export default function Home() {
         onAddBook={handleAddBook}
         onImport={() => setIsImportModalOpen(true)}
         onShowShortcuts={() => setIsShortcutsHelpOpen(true)}
+        isSelectionMode={isSelectionMode}
+        onToggleSelectionMode={() => {
+          setIsSelectionMode(!isSelectionMode);
+          if (isSelectionMode) {
+            // Exit selection mode - clear selections
+            setSelectedBookIds(new Set());
+          }
+        }}
+        selectedCount={selectedBookIds.size}
       />
 
       {/* Main Content with proper spacing for sidebar on desktop and mobile nav */}
@@ -617,6 +687,9 @@ export default function Home() {
               // TODO: Show collection selection modal
               alert('Add to collection feature - select collection modal will be implemented');
             }}
+            isSelectionMode={isSelectionMode}
+            selectedBookIds={selectedBookIds}
+            onToggleSelection={toggleBookSelection}
           />
         ) : (
           <BookshelfView
@@ -664,8 +737,8 @@ export default function Home() {
         />
       )}
 
-      {/* Import Books Modal (handles both Goodreads and generic CSV with auto-detection) */}
-      <ImportGoodreadsModal
+      {/* Advanced Import Modal - Multiple sources with modern UI */}
+      <AdvancedImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImportComplete={() => {

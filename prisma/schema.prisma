@@ -20,11 +20,12 @@ model User {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  books         Book[]
-  collections   Collection[]
-  quotes        Quote[]
-  importHistory ImportHistory[]
-  readingGoals  ReadingGoal[]
+  books           Book[]
+  collections     Collection[]
+  quotes          Quote[]
+  importHistory   ImportHistory[]
+  readingGoals    ReadingGoal[]
+  readingSessions ReadingSession[]
 
   @@index([clerkId])
   @@index([email])
@@ -59,9 +60,10 @@ model Book {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  collections   BookCollection[]
-  quotes        Quote[]
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collections     BookCollection[]
+  quotes          Quote[]
+  readingSessions ReadingSession[]
 
   // Single-column indexes
   @@index([userId])
@@ -132,6 +134,29 @@ model Quote {
   @@index([isFavorite])
   @@index([userId, bookId]) // Quotes for a specific user's book
   @@index([userId, isFavorite]) // User's favorite quotes
+}
+
+model ReadingSession {
+  id          String   @id @default(uuid())
+  userId      String
+  bookId      String
+  startPage   Int?     // Page where session started
+  endPage     Int?     // Page where session ended
+  pagesRead   Int?     // Number of pages read in this session
+  duration    Int?     // Reading duration in minutes
+  sessionDate DateTime @default(now()) // When this reading session occurred
+  notes       String?  @db.Text // Optional session notes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([bookId])
+  @@index([sessionDate])
+  @@index([userId, sessionDate]) // User's reading history timeline
+  @@index([userId, bookId, sessionDate]) // Reading sessions for a specific book
 }
 
 model ImportHistory {

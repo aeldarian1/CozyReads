@@ -10,9 +10,20 @@ interface VirtualizedBookGridProps {
   onBookClick: (book: Book) => void;
   onBookUpdate?: (bookId: string, updates: Partial<Book>) => void;
   onAddToCollection?: (bookId: string) => void;
+  isSelectionMode?: boolean;
+  selectedBookIds?: Set<string>;
+  onToggleSelection?: (bookId: string) => void;
 }
 
-export function VirtualizedBookGrid({ books, onBookClick, onBookUpdate, onAddToCollection }: VirtualizedBookGridProps) {
+export function VirtualizedBookGrid({
+  books,
+  onBookClick,
+  onBookUpdate,
+  onAddToCollection,
+  isSelectionMode = false,
+  selectedBookIds = new Set(),
+  onToggleSelection
+}: VirtualizedBookGridProps) {
   // Using CSS Grid for responsive layout - performs well for most library sizes
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
 
@@ -83,9 +94,17 @@ export function VirtualizedBookGrid({ books, onBookClick, onBookUpdate, onAddToC
           >
             <ModernBookCard
               book={book}
-              onClick={() => onBookClick(book)}
+              onClick={() => {
+                if (isSelectionMode && onToggleSelection) {
+                  onToggleSelection(book.id);
+                } else {
+                  onBookClick(book);
+                }
+              }}
               onUpdate={(updates) => onBookUpdate?.(book.id, updates)}
               onAddToCollection={onAddToCollection}
+              isSelectionMode={isSelectionMode}
+              isSelected={selectedBookIds.has(book.id)}
             />
           </div>
         ))}

@@ -1,26 +1,58 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+
+// Helper function to get or create user
+async function getOrCreateUser(clerkUser: any) {
+  let user = await prisma.user.findUnique({
+    where: { clerkId: clerkUser.id },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        clerkId: clerkUser.id,
+        email: clerkUser.emailAddresses[0]?.emailAddress || '',
+        firstName: clerkUser.firstName,
+        lastName: clerkUser.lastName,
+        imageUrl: clerkUser.imageUrl,
+      },
+    });
+  }
+
+  return user;
+}
 
 // GET /api/quotes/[id] - Get a specific quote
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const { userId: clerkUserId } = await auth();
 
-    if (!userId) {
+    if (!clerkUserId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const user = await getOrCreateUser(clerkUser);
+    const { id } = await params;
+
     const quote = await prisma.quote.findFirst({
       where: {
-        id: params.id,
-        userId,
+        id,
+        userId: user.id,
       },
       include: {
         book: {
@@ -54,26 +86,36 @@ export async function GET(
 // PUT /api/quotes/[id] - Update a quote
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const { userId: clerkUserId } = await auth();
 
-    if (!userId) {
+    if (!clerkUserId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const user = await getOrCreateUser(clerkUser);
+    const { id } = await params;
     const body = await request.json();
     const { text, pageNumber, notes, isFavorite } = body;
 
     // Verify quote belongs to user
     const existingQuote = await prisma.quote.findFirst({
       where: {
-        id: params.id,
-        userId,
+        id,
+        userId: user.id,
       },
     });
 
@@ -86,7 +128,7 @@ export async function PUT(
 
     // Update quote
     const quote = await prisma.quote.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(text !== undefined && { text: text.trim() }),
         ...(pageNumber !== undefined && { pageNumber }),
@@ -108,23 +150,34 @@ export async function PUT(
 // DELETE /api/quotes/[id] - Delete a quote
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId } = await auth();
+    const { userId: clerkUserId } = await auth();
 
-    if (!userId) {
+    if (!clerkUserId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    const clerkUser = await currentUser();
+    if (!clerkUser) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    const user = await getOrCreateUser(clerkUser);
+    const { id } = await params;
+
     // Verify quote belongs to user
     const existingQuote = await prisma.quote.findFirst({
       where: {
-        id: params.id,
-        userId,
+        id,
+        userId: user.id,
       },
     });
 
@@ -137,7 +190,7 @@ export async function DELETE(
 
     // Delete quote
     await prisma.quote.delete({
-      where: { id: params.id },
+      where: { id },
     });
 
     return NextResponse.json({ success: true });

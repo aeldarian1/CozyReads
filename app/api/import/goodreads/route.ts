@@ -78,13 +78,27 @@ export async function POST(request: NextRequest) {
     const fileContent = await file.text();
 
     // 5. Parse CSV
-    const { books, errors: parseErrors } = await parseGoodreadsCSV(fileContent);
+    const { books, errors: parseErrors, warnings: parseWarnings } = await parseGoodreadsCSV(fileContent);
+
+    // Count skipped books due to missing required fields
+    const skippedDueToMissingFields = parseErrors.filter(error =>
+      error.includes('Missing required field')
+    ).length;
+
+    // Count books without ISBN (warnings)
+    const booksWithoutISBN = parseWarnings.filter(warning =>
+      warning.includes('No ISBN found')
+    ).length;
 
     if (books.length === 0) {
       return NextResponse.json(
         {
           error: 'No valid books found in CSV',
-          parseErrors
+          parseErrors,
+          skippedDueToMissingFields,
+          message: skippedDueToMissingFields > 0
+            ? `All ${skippedDueToMissingFields} book(s) were skipped due to missing required fields (title or author)`
+            : 'No valid books found in the CSV file'
         },
         { status: 400 }
       );
@@ -96,7 +110,16 @@ export async function POST(request: NextRequest) {
         success: true,
         books,
         parseErrors,
+        parseWarnings,
         totalBooks: books.length,
+        skippedDueToMissingFields,
+        booksWithoutISBN,
+        message: skippedDueToMissingFields > 0
+          ? `${skippedDueToMissingFields} book(s) skipped due to missing required fields (title or author)`
+          : undefined,
+        warningMessage: booksWithoutISBN > 0
+          ? `${booksWithoutISBN} book(s) imported without ISBN - enrichment may be limited`
+          : undefined
       });
     }
 
@@ -139,6 +162,8 @@ export async function POST(request: NextRequest) {
             totalProcessed: 0,
             imported: 0,
             skipped: 0,
+            skippedDueToMissingFields,
+            booksWithoutISBN,
             failed: 0,
             errors: [] as any[],
             collectionsCreated: [] as string[],
