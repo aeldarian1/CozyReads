@@ -92,10 +92,13 @@ export function Shelf({ books, bookColors, onBookClick, label, highlightedBookId
         }} />
 
         {/* Books Container with 3D depth */}
-        <div className="flex items-end gap-1 pt-6 px-6 pb-0 overflow-x-auto scrollbar-thin relative" style={{
+        <div className="flex items-end gap-1 pt-6 pb-0 overflow-x-auto scrollbar-thin relative" style={{
           minHeight: '180px',
+          paddingLeft: '32px',
+          paddingRight: '32px',
           background: 'linear-gradient(to bottom, transparent 0%, rgba(139, 111, 71, 0.02) 100%)',
           transformStyle: 'preserve-3d',
+          overflowY: 'visible',
         }}>
           {books.map((book) => (
             <BookSpine
