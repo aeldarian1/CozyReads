@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { Book } from '@/app/page';
 import { Shelf } from './Shelf';
+import { Virtual3DBookshelf } from './Virtual3DBookshelf';
 import { preloadBookColors } from '@/lib/color-extractor';
+import { Library, BookOpen, Loader2 } from 'lucide-react';
 
 interface BookshelfViewProps {
   books: Book[];
@@ -27,15 +29,21 @@ export function BookshelfView({ books, onBookClick, searchQuery }: BookshelfView
     loadColors();
   }, [books]);
 
-  // Group books into shelves (15 books per shelf on desktop)
+  // Group books into shelves - fit more books per shelf
   const getBooksPerShelf = () => {
-    if (typeof window === 'undefined') return 15;
-    if (window.innerWidth < 640) return 6; // mobile
-    if (window.innerWidth < 1024) return 10; // tablet
-    return 15; // desktop
+    if (typeof window === 'undefined') return 30;
+    if (window.innerWidth < 640) return 10; // mobile
+    if (window.innerWidth < 1024) return 18; // tablet
+    if (window.innerWidth < 1536) return 25; // laptop
+    return 30; // desktop - more books!
   };
 
   const [booksPerShelf, setBooksPerShelf] = useState(getBooksPerShelf());
+
+  // Set correct books per shelf on mount (client-side)
+  useEffect(() => {
+    setBooksPerShelf(getBooksPerShelf());
+  }, []);
 
   // Update books per shelf on window resize
   useEffect(() => {
@@ -69,11 +77,17 @@ export function BookshelfView({ books, onBookClick, searchQuery }: BookshelfView
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-center">
-          <div className="text-6xl mb-4">📚</div>
-          <p className="text-lg" style={{ color: 'var(--text-muted)' }}>
+      <div className="flex items-center justify-center py-32">
+        <div className="text-center animate-fadeIn">
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 rounded-full blur-xl opacity-30" style={{ background: 'var(--gradient-accent)' }} />
+            <Loader2 className="w-16 h-16 animate-spin relative" style={{ color: 'var(--warm-brown)' }} strokeWidth={2.5} />
+          </div>
+          <p className="text-xl font-bold" style={{ color: 'var(--text-dark)' }}>
             Building your bookshelf...
+          </p>
+          <p className="text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+            Loading book collection
           </p>
         </div>
       </div>
@@ -82,95 +96,107 @@ export function BookshelfView({ books, onBookClick, searchQuery }: BookshelfView
 
   if (books.length === 0) {
     return (
-      <div className="text-center py-20 px-4 rounded-2xl" style={{
-        background: 'linear-gradient(135deg, #fdf8f3 0%, #f5f1e8 100%)',
-        border: '3px dashed rgba(139, 111, 71, 0.3)'
+      <div className="text-center py-32 px-6 rounded-2xl animate-fadeIn shadow-elevation-2" style={{
+        background: 'var(--gradient-card)',
+        border: '3px dashed var(--border-color)'
       }}>
-        <div className="text-8xl mb-6">📚</div>
-        <h3 className="text-3xl font-bold mb-3" style={{
-          color: '#5d4e37',
-          fontFamily: 'Merriweather, serif'
+        <div className="relative inline-block mb-8">
+          <div className="absolute inset-0 rounded-full blur-2xl opacity-20" style={{ background: 'var(--gradient-accent)' }} />
+          <Library className="w-24 h-24 relative" style={{ color: 'var(--warm-brown)' }} strokeWidth={1.5} />
+        </div>
+        <h3 className="text-4xl font-black mb-4" style={{
+          color: 'var(--text-dark)',
+          fontFamily: 'Playfair Display, serif'
         }}>
-          Your bookshelf awaits...
+          Your Bookshelf Awaits
         </h3>
-        <p className="text-lg mb-4" style={{ color: '#6d4c41' }}>
-          Start building your cozy collection
+        <p className="text-lg font-medium mb-6 max-w-md mx-auto" style={{ color: 'var(--text-muted)' }}>
+          Start building your cozy collection of literary treasures
         </p>
-        <p className="text-sm" style={{ color: '#8b6f47' }}>
-          Click "📚 Add New Book" above to begin your reading journey
-        </p>
+        <div className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl inline-flex" style={{
+          background: 'var(--bg-tertiary)',
+          border: '2px solid var(--border-color)'
+        }}>
+          <BookOpen className="w-5 h-5" style={{ color: 'var(--warm-brown)' }} strokeWidth={2.5} />
+          <p className="text-sm font-bold" style={{ color: 'var(--text-dark)' }}>
+            Click "Add Book" to begin your reading journey
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bookshelf-view" style={{ perspective: '2000px' }}>
-      {/* 3D Bookshelf container with lighting */}
+    <div className="bookshelf-view">
+      {/* Modern Enhanced Bookshelf Container */}
       <div
-        className="min-h-screen rounded-3xl p-10 relative"
+        className="rounded-3xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden"
         style={{
-          background: `
-            radial-gradient(ellipse at top, #faf6ee 0%, #f2ede1 30%, #ebe5d7 60%, #e3dbc9 100%),
-            linear-gradient(145deg, #f8f4ec 0%, #ede8dc 100%)
-          `,
-          boxShadow: `
-            inset 0 4px 20px rgba(0, 0, 0, 0.1),
-            inset 0 0 80px rgba(139, 111, 71, 0.04),
-            0 8px 32px rgba(0, 0, 0, 0.15),
-            0 2px 8px rgba(0, 0, 0, 0.1)
-          `,
-          transformStyle: 'preserve-3d',
-          transform: 'rotateX(1deg)',
+          background: 'linear-gradient(135deg, rgba(45, 45, 45, 0.4) 0%, rgba(30, 30, 30, 0.6) 100%)',
+          border: '1px solid rgba(139, 111, 71, 0.3)',
+          boxShadow: '0 20px 60px rgba(0, 0, 0, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.05)',
         }}
       >
-        {/* Enhanced wall texture overlay */}
+        {/* Ambient lighting for depth */}
         <div
-          className="absolute inset-0 opacity-10 pointer-events-none rounded-2xl"
-          style={{
-            backgroundImage: `
-              repeating-linear-gradient(
-                0deg,
-                transparent,
-                transparent 2px,
-                rgba(139, 111, 71, 0.08) 2px,
-                rgba(139, 111, 71, 0.08) 4px
-              ),
-              repeating-linear-gradient(
-                90deg,
-                transparent,
-                transparent 2px,
-                rgba(139, 111, 71, 0.05) 2px,
-                rgba(139, 111, 71, 0.05) 4px
-              )
-            `,
-          }}
-        />
-
-        {/* Dramatic vignette and lighting effect */}
-        <div
-          className="absolute inset-0 pointer-events-none rounded-3xl"
+          className="absolute inset-0 pointer-events-none rounded-2xl"
           style={{
             background: `
-              radial-gradient(ellipse at 50% 30%, transparent 0%, transparent 40%, rgba(0, 0, 0, 0.08) 100%),
-              radial-gradient(ellipse at top, rgba(255, 248, 230, 0.3) 0%, transparent 50%)
+              radial-gradient(ellipse at 50% 0%, rgba(255, 255, 255, 0.15) 0%, transparent 50%),
+              radial-gradient(ellipse at 50% 100%, rgba(0, 0, 0, 0.08) 0%, transparent 50%)
             `,
           }}
         />
 
-        {/* Ambient light rays */}
+        {/* Subtle vignette for depth */}
         <div
-          className="absolute inset-0 pointer-events-none rounded-3xl opacity-30"
+          className="absolute inset-0 pointer-events-none rounded-2xl"
           style={{
-            background: `
-              radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255, 243, 205, 0.4), transparent),
-              radial-gradient(circle at 20% 80%, rgba(201, 169, 97, 0.1), transparent 40%),
-              radial-gradient(circle at 80% 60%, rgba(201, 169, 97, 0.1), transparent 40%)
-            `,
+            background: 'radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.03) 100%)',
           }}
         />
 
-        {/* Shelves */}
-        <div className="relative z-10">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between flex-wrap gap-4 relative z-10">
+          <div className="flex items-center gap-4">
+            <div
+              className="p-3 rounded-xl shadow-lg"
+              style={{
+                background: 'var(--gradient-accent)',
+              }}
+            >
+              <Library className="w-8 h-8 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black" style={{
+                color: 'var(--text-dark)',
+                fontFamily: 'Playfair Display, serif'
+              }}>
+                Your Bookshelf
+              </h2>
+              <p className="text-sm font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
+                {books.length} {books.length === 1 ? 'book' : 'books'} across {shelves.length} {shelves.length === 1 ? 'shelf' : 'shelves'}
+              </p>
+            </div>
+          </div>
+
+          {/* Info Badge */}
+          <div
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl shadow-sm"
+            style={{
+              background: 'var(--bg-tertiary)',
+              border: '2px solid var(--border-color)',
+            }}
+          >
+            <BookOpen className="w-5 h-5" style={{ color: 'var(--warm-brown)' }} strokeWidth={2.5} />
+            <span className="text-sm font-bold" style={{ color: 'var(--text-dark)' }}>
+              Click any book to view details
+            </span>
+          </div>
+        </div>
+
+        {/* CSS-based Bookshelf - Much Better! */}
+        <div className="relative z-10 space-y-8">
           {shelves.map((shelfBooks, index) => (
             <Shelf
               key={index}
@@ -178,41 +204,58 @@ export function BookshelfView({ books, onBookClick, searchQuery }: BookshelfView
               bookColors={bookColors}
               onBookClick={onBookClick}
               highlightedBookIds={highlightedBookIds}
+              index={index}
             />
           ))}
         </div>
 
-        {/* Beautiful info footer with 3D effect */}
-        <div className="relative z-10 mt-16 text-center">
-          <div
-            className="inline-block px-8 py-4 rounded-2xl relative"
-            style={{
-              background: `
-                linear-gradient(145deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.5)),
-                linear-gradient(180deg, rgba(250, 246, 238, 0.8), rgba(240, 234, 217, 0.6))
-              `,
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(139, 111, 71, 0.25)',
-              boxShadow: `
-                0 4px 16px rgba(0, 0, 0, 0.12),
-                0 2px 6px rgba(0, 0, 0, 0.08),
-                inset 0 1px 0 rgba(255, 255, 255, 0.6),
-                inset 0 -1px 0 rgba(0, 0, 0, 0.05)
-              `,
-              transformStyle: 'preserve-3d',
-              transform: 'translateZ(10px)',
-            }}
-          >
-            <div className="flex items-center gap-3 mb-1">
-              <span style={{ fontSize: '20px' }}>📚</span>
-              <p className="font-bold text-lg" style={{ color: 'var(--text-dark)' }}>
-                {books.length} {books.length === 1 ? 'Book' : 'Books'} • {shelves.length} {shelves.length === 1 ? 'Shelf' : 'Shelves'}
-              </p>
-              <span style={{ fontSize: '20px' }}>📚</span>
+        {/* Footer Stats */}
+        <div
+          className="mt-10 pt-8 border-t-2 relative z-10"
+          style={{
+            borderColor: 'var(--border-color)',
+          }}
+        >
+          <div className="flex items-center justify-center gap-8 flex-wrap">
+            <div className="text-center">
+              <div
+                className="text-3xl font-black mb-1"
+                style={{ color: 'var(--warm-brown)' }}
+              >
+                {books.length}
+              </div>
+              <div className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>
+                Total Books
+              </div>
             </div>
-            <p className="text-sm opacity-80" style={{ color: 'var(--text-muted)' }}>
-              Click a book spine to view details
-            </p>
+            <div className="w-px h-12" style={{
+              background: 'var(--border-color)',
+            }} />
+            <div className="text-center">
+              <div
+                className="text-3xl font-black mb-1"
+                style={{ color: 'var(--warm-brown)' }}
+              >
+                {shelves.length}
+              </div>
+              <div className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>
+                Shelves
+              </div>
+            </div>
+            <div className="w-px h-12" style={{
+              background: 'var(--border-color)',
+            }} />
+            <div className="text-center">
+              <div
+                className="text-3xl font-black mb-1"
+                style={{ color: 'var(--warm-brown)' }}
+              >
+                {highlightedBookIds.size > 0 ? highlightedBookIds.size : books.length}
+              </div>
+              <div className="text-sm font-bold" style={{ color: 'var(--text-muted)' }}>
+                {highlightedBookIds.size > 0 ? 'Matches' : 'Displayed'}
+              </div>
+            </div>
           </div>
         </div>
       </div>

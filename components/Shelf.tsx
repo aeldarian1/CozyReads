@@ -1,5 +1,6 @@
 import { Book } from '@/app/page';
 import { BookSpine } from './BookSpine';
+import { motion } from 'framer-motion';
 
 interface ShelfProps {
   books: Book[];
@@ -7,42 +8,71 @@ interface ShelfProps {
   onBookClick: (book: Book) => void;
   label?: string;
   highlightedBookIds?: Set<string>;
+  index?: number;
 }
 
-export function Shelf({ books, bookColors, onBookClick, label, highlightedBookIds }: ShelfProps) {
+export function Shelf({ books, bookColors, onBookClick, label, highlightedBookIds, index = 0 }: ShelfProps) {
+  const shelfVariants = {
+    hidden: { opacity: 0, y: 50, rotateX: -15 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      rotateX: 0,
+      transition: {
+        type: "spring",
+        stiffness: 100,
+        damping: 15,
+        staggerChildren: 0.05,
+        delayChildren: 0.1
+      }
+    }
+  };
+
   return (
-    <div className="shelf-container mb-8">
+    <motion.div
+      className="shelf-container"
+      variants={shelfVariants}
+    >
       {/* Shelf Label */}
       {label && (
-        <div className="mb-2 px-4">
-          <span
-            className="text-sm font-bold"
-            style={{
-              color: 'var(--text-dark)',
-              fontFamily: 'Merriweather, serif',
-            }}
-          >
+        <motion.div
+          className="mb-3"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: index * 0.1 }}
+        >
+          <span className="text-sm font-black" style={{
+            color: 'var(--text-dark)',
+            fontFamily: 'Playfair Display, serif',
+          }}>
             {label}
           </span>
-        </div>
+        </motion.div>
       )}
 
-      {/* Shelf with books - 3D perspective */}
+      {/* Modern 3D Shelf Container with enhanced styling */}
       <div
-        className="shelf relative"
+        className="relative rounded-2xl overflow-visible shadow-2xl group"
         style={{
+          background: 'linear-gradient(to bottom, rgba(139, 111, 71, 0.08), rgba(139, 111, 71, 0.12))',
+          border: '1px solid rgba(139, 111, 71, 0.2)',
           transformStyle: 'preserve-3d',
-          perspective: '1200px',
+          backdropFilter: 'blur(10px)',
         }}
       >
-        {/* Books container */}
-        <div
-          className="flex items-end gap-2 px-8 pb-5 overflow-x-auto"
-          style={{
-            transformStyle: 'preserve-3d',
-            transform: 'rotateX(2deg)',
-          }}
-        >
+        {/* Enhanced 3D Back Wall */}
+        <div className="absolute inset-0 pointer-events-none rounded-2xl" style={{
+          background: 'linear-gradient(to bottom, rgba(30, 30, 30, 0.05) 0%, rgba(30, 30, 30, 0.1) 100%)',
+          transform: 'translateZ(-10px)',
+          boxShadow: 'inset 0 4px 12px rgba(0, 0, 0, 0.08)',
+        }} />
+
+        {/* Books Container with 3D depth */}
+        <div className="flex items-end gap-1 pt-6 px-6 pb-0 overflow-x-auto scrollbar-thin relative" style={{
+          minHeight: '180px',
+          background: 'linear-gradient(to bottom, transparent 0%, rgba(139, 111, 71, 0.02) 100%)',
+          transformStyle: 'preserve-3d',
+        }}>
           {books.map((book) => (
             <BookSpine
               key={book.id}
@@ -54,126 +84,58 @@ export function Shelf({ books, bookColors, onBookClick, label, highlightedBookId
           ))}
         </div>
 
-        {/* Wooden shelf surface - 3D enhanced */}
-        <div
-          className="shelf-surface relative"
-          style={{
-            height: '28px',
-            background: `
-              linear-gradient(to bottom,
-                #a89477 0%,
-                #9d8b7a 15%,
-                #8b7355 30%,
-                #7a6551 45%,
-                #6d5d4f 60%,
-                #5d4e37 75%,
-                #4d3e27 90%,
-                #3d2e17 100%
-              )
-            `,
-            borderRadius: '4px 4px 0 0',
-            boxShadow: `
-              0 4px 12px rgba(0, 0, 0, 0.5),
-              0 8px 20px rgba(0, 0, 0, 0.3),
-              inset 0 3px 2px rgba(255, 255, 255, 0.2),
-              inset 0 -2px 4px rgba(0, 0, 0, 0.4)
-            `,
-            position: 'relative',
-            transformStyle: 'preserve-3d',
-            transform: 'translateZ(-2px)',
-          }}
-        >
+        {/* Enhanced 3D Shelf Base */}
+        <div className="relative h-5 shadow-2xl transition-all duration-300" style={{
+          background: 'linear-gradient(to bottom, #a3876e 0%, #8b7355 50%, #6b5d4a 100%)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+          transform: 'translateZ(5px)',
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3), inset 0 1px 2px rgba(255, 255, 255, 0.2)',
+        }}>
+          {/* Glossy top highlight */}
+          <div className="absolute top-0 left-0 right-0 h-1 opacity-70" style={{
+            background: 'linear-gradient(to right, transparent, rgba(255, 255, 255, 0.6), transparent)',
+            boxShadow: '0 1px 3px rgba(255, 255, 255, 0.3)',
+          }} />
+
           {/* Wood grain texture */}
-          <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{
-              backgroundImage: `
-                repeating-linear-gradient(
-                  90deg,
-                  transparent,
-                  transparent 3px,
-                  rgba(0, 0, 0, 0.1) 3px,
-                  rgba(0, 0, 0, 0.1) 4px
-                ),
-                repeating-linear-gradient(
-                  90deg,
-                  transparent,
-                  transparent 30px,
-                  rgba(0, 0, 0, 0.05) 30px,
-                  rgba(0, 0, 0, 0.05) 32px
-                )
-              `,
-              borderRadius: '3px 3px 0 0',
-            }}
-          />
+          <div className="absolute inset-0 opacity-10" style={{
+            backgroundImage: `repeating-linear-gradient(90deg,
+              transparent,
+              transparent 10px,
+              rgba(0, 0, 0, 0.1) 10px,
+              rgba(0, 0, 0, 0.1) 11px)`,
+          }} />
 
-          {/* Shelf top edge highlight */}
-          <div
-            className="absolute top-0 left-0 right-0 h-2"
-            style={{
-              background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.25), transparent)',
-              borderRadius: '3px 3px 0 0',
-            }}
-          />
-
-          {/* Shelf front edge (3D effect) - more pronounced */}
-          <div
-            className="absolute -bottom-2 left-0 right-0 h-3"
-            style={{
-              background: 'linear-gradient(to bottom, #5d4e37 0%, #4d3e27 50%, #3d2e17 100%)',
-              boxShadow: '0 3px 10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
-              borderRadius: '0 0 2px 2px',
-            }}
-          />
+          {/* Enhanced shelf front edge */}
+          <div className="absolute -bottom-1 left-0 right-0 h-2" style={{
+            background: 'linear-gradient(to bottom, rgba(107, 93, 74, 0.9), rgba(75, 63, 50, 1))',
+            boxShadow: '0 3px 6px rgba(0, 0, 0, 0.3)',
+            transform: 'translateZ(-2px)',
+            borderRadius: '0 0 2px 2px',
+          }} />
         </div>
 
-        {/* Enhanced shelf brackets */}
-        <div
-          className="absolute -left-2 bottom-0"
+        {/* Side brackets for 3D depth */}
+        <div className="absolute left-0 bottom-0 w-3 h-full pointer-events-none" style={{
+          background: 'linear-gradient(to right, rgba(139, 111, 71, 0.15), transparent)',
+          transform: 'translateZ(10px)',
+        }} />
+        <motion.div
+          className="absolute right-0 bottom-0 w-3 h-full pointer-events-none"
           style={{
-            width: '16px',
-            height: '36px',
-            background: `
-              linear-gradient(135deg,
-                #7a6551 0%,
-                #6d5d4f 30%,
-                #5d4e37 50%,
-                #4d3e27 100%
-              )
-            `,
-            borderRadius: '3px',
-            boxShadow: `
-              0 3px 6px rgba(0, 0, 0, 0.4),
-              inset 1px 1px 2px rgba(255, 255, 255, 0.1),
-              inset -1px -1px 2px rgba(0, 0, 0, 0.2)
-            `,
-            border: '1px solid rgba(0, 0, 0, 0.2)',
+            background: 'linear-gradient(to left, rgba(139, 111, 71, 0.15), transparent)',
+            translateZ: 10,
           }}
-        />
-
-        <div
-          className="absolute -right-2 bottom-0"
-          style={{
-            width: '16px',
-            height: '36px',
-            background: `
-              linear-gradient(225deg,
-                #7a6551 0%,
-                #6d5d4f 30%,
-                #5d4e37 50%,
-                #4d3e27 100%
-              )
-            `,
-            borderRadius: '3px',
-            boxShadow: `
-              0 3px 6px rgba(0, 0, 0, 0.4),
-              inset 1px 1px 2px rgba(255, 255, 255, 0.1),
-              inset -1px -1px 2px rgba(0, 0, 0, 0.2)
-            `,
-            border: '1px solid rgba(0, 0, 0, 0.2)',
+          animate={{
+            opacity: [0.5, 0.8, 0.5],
+          }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
           }}
         />
       </div>
-    </div>
+    </motion.div>
   );
 }
