@@ -1,6 +1,6 @@
 'use client';
 
-import { Book } from '@/lib/hooks/useBooks';
+import { Book } from '@/app/page';
 import { useState, memo } from 'react';
 import { BookOpen, Star } from 'lucide-react';
 import { QuickActions } from './QuickActions';

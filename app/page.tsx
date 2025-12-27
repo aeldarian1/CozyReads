@@ -570,7 +570,7 @@ export default function Home() {
 
         {/* View Toggle and Sort */}
         <div className="mb-6">
-          <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl flex-wrap" style={{
+          <div className="flex items-center justify-between gap-4 px-6 py-4 rounded-2xl flex-wrap shadow-elevation-2 backdrop-blur-xl" style={{
             background: 'var(--gradient-card)',
             border: '2px solid var(--border-color)'
           }}>
@@ -578,16 +578,17 @@ export default function Home() {
             <ViewToggle currentView={viewMode} onViewChange={handleViewChange} />
 
             {/* Sort Dropdown */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold" style={{ color: 'var(--text-dark)' }}>Sort by:</span>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-black whitespace-nowrap" style={{ color: 'var(--text-dark)' }}>Sort by:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="px-3 py-1 rounded-lg border-2 font-semibold"
+                className="pl-4 pr-10 py-3 rounded-xl border-2 font-bold cursor-pointer transition-all duration-300 focus:outline-none focus:shadow-lg hover:border-opacity-80"
                 style={{
                   borderColor: 'var(--border-color)',
                   background: 'var(--bg-secondary)',
-                  color: 'var(--text-dark)'
+                  color: 'var(--text-dark)',
+                  minWidth: '180px'
                 }}
               >
                 <option value="dateAdded">📅 Date Added</option>

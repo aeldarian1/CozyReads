@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { Search, ChevronDown, X } from 'lucide-react';
 
 export type AdvancedFilters = {
   searchQuery: string;
@@ -59,64 +60,77 @@ export function AdvancedSearch({
     filters.collectionFilter;
 
   return (
-    <div className="mb-6 rounded-2xl overflow-hidden shadow-lg" style={{
+    <div className="mb-6 rounded-2xl overflow-hidden shadow-elevation-3 backdrop-blur-xl group" style={{
       background: 'var(--gradient-card)',
       border: '2px solid var(--border-color)'
     }}>
       {/* Header */}
       <div
-        className="p-4 cursor-pointer flex items-center justify-between hover:bg-opacity-80 transition-all"
+        className="p-5 cursor-pointer flex items-center justify-between transition-all duration-300 hover:shadow-elevation-4 relative overflow-hidden"
         onClick={() => setIsExpanded(!isExpanded)}
         style={{ background: 'var(--gradient-accent)' }}
       >
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">🔍</span>
-          <h3 className="text-xl font-bold text-white" style={{
+        {/* Shine effect on hover */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+
+        <div className="flex items-center gap-4 relative z-10">
+          <div className="p-2.5 rounded-xl bg-white/25 backdrop-blur-sm group-hover:bg-white/35 transition-colors">
+            <Search className="w-6 h-6 text-white" strokeWidth={2.5} />
+          </div>
+          <h3 className="text-2xl font-black text-white" style={{
             fontFamily: 'Playfair Display, serif',
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            textShadow: '0 2px 8px rgba(0,0,0,0.3)'
           }}>
             Advanced Search
           </h3>
           {hasActiveFilters && (
-            <span className="px-3 py-1 rounded-full text-xs font-bold" style={{
-              background: 'rgba(212, 165, 116, 0.9)',
-              color: '#2d1f15'
+            <span className="px-3 py-1.5 rounded-full text-xs font-black animate-fadeIn shadow-lg" style={{
+              background: 'rgba(255, 255, 255, 0.3)',
+              color: 'white',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.4)'
             }}>
-              Active Filters
+              {/* Count active filters */}
+              Active
             </span>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 relative z-10">
           {hasActiveFilters && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onClearFilters();
               }}
-              className="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-lg"
               style={{
-                background: 'rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.25)',
                 color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.3)'
+                border: '2px solid rgba(255, 255, 255, 0.4)',
+                backdropFilter: 'blur(10px)'
               }}
             >
+              <X className="w-4 h-4" strokeWidth={3} />
               Clear All
             </button>
           )}
-          <span className="text-white text-2xl transform transition-transform" style={{
-            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
-          }}>
-            ▼
-          </span>
+          <ChevronDown
+            className="w-6 h-6 text-white transition-transform duration-300"
+            strokeWidth={3}
+            style={{
+              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'
+            }}
+          />
         </div>
       </div>
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 animate-fadeIn">
           {/* Search Query */}
           <div>
-            <label className="block text-sm font-bold mb-2" style={{ color: '#5d4e37' }}>
+            <label className="block text-sm font-black mb-3 flex items-center gap-2" style={{ color: 'var(--text-dark)' }}>
+              <Search className="w-4 h-4" style={{ color: 'var(--warm-brown)' }} strokeWidth={2.5} />
               Search Text
             </label>
             <input
@@ -124,32 +138,33 @@ export function AdvancedSearch({
               value={filters.searchQuery}
               onChange={(e) => updateFilter('searchQuery', e.target.value)}
               placeholder="Type to search (typo-tolerant)..."
-              className="w-full px-4 py-3 rounded-xl border-2 transition-all focus:outline-none focus:ring-2"
+              className="w-full px-5 py-3.5 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:border-opacity-100 focus:shadow-lg font-medium"
               style={{
-                borderColor: 'rgba(139, 111, 71, 0.3)',
-                background: '#fefefe',
-                color: '#3e2723'
+                borderColor: 'var(--border-color)',
+                background: 'var(--bg-secondary)',
+                color: 'var(--text-dark)'
               }}
             />
           </div>
 
           {/* Search Fields */}
           <div>
-            <label className="block text-sm font-bold mb-2" style={{ color: '#5d4e37' }}>
+            <label className="block text-sm font-black mb-3" style={{ color: 'var(--text-dark)' }}>
               Search In:
             </label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               {['title', 'author', 'genre', 'description', 'review'].map((field) => (
                 <button
                   key={field}
                   onClick={() => toggleSearchField(field)}
-                  className="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105"
+                  className="px-5 py-2.5 rounded-xl font-bold transition-all duration-300 hover:scale-105 shadow-sm hover:shadow-md"
                   style={{
                     background: filters.searchFields.includes(field)
-                      ? 'linear-gradient(135deg, #8b6f47 0%, #a08968 100%)'
-                      : 'rgba(139, 111, 71, 0.1)',
-                    color: filters.searchFields.includes(field) ? 'white' : '#5d4e37',
-                    border: '2px solid rgba(139, 111, 71, 0.3)'
+                      ? 'var(--gradient-accent)'
+                      : 'var(--bg-tertiary)',
+                    color: filters.searchFields.includes(field) ? 'white' : 'var(--text-dark)',
+                    border: `2px solid ${filters.searchFields.includes(field) ? 'transparent' : 'var(--border-color)'}`,
+                    textShadow: filters.searchFields.includes(field) ? '0 1px 2px rgba(0,0,0,0.2)' : 'none'
                   }}
                 >
                   {field.charAt(0).toUpperCase() + field.slice(1)}
@@ -160,8 +175,14 @@ export function AdvancedSearch({
 
           {/* Rating Range */}
           <div>
-            <label className="block text-sm font-bold mb-2" style={{ color: '#5d4e37' }}>
-              Rating Range: {filters.ratingRange[0]} - {filters.ratingRange[1]} ⭐
+            <label className="block text-sm font-black mb-3 flex items-center justify-between" style={{ color: 'var(--text-dark)' }}>
+              <span>Rating Range</span>
+              <span className="px-3 py-1 rounded-full text-xs font-black" style={{
+                background: 'var(--gradient-accent)',
+                color: 'white'
+              }}>
+                {filters.ratingRange[0]} - {filters.ratingRange[1]} ⭐
+              </span>
             </label>
             <div className="flex gap-4 items-center">
               <input
@@ -170,24 +191,33 @@ export function AdvancedSearch({
                 max="5"
                 value={filters.ratingRange[0]}
                 onChange={(e) => updateFilter('ratingRange', [parseInt(e.target.value), filters.ratingRange[1]])}
-                className="flex-1"
+                className="flex-1 accent-[var(--warm-brown)]"
               />
-              <span className="text-sm font-bold" style={{ color: '#8b6f47' }}>to</span>
+              <span className="text-sm font-bold px-3 py-1 rounded-lg" style={{
+                color: 'var(--text-dark)',
+                background: 'var(--bg-tertiary)'
+              }}>to</span>
               <input
                 type="range"
                 min="0"
                 max="5"
                 value={filters.ratingRange[1]}
                 onChange={(e) => updateFilter('ratingRange', [filters.ratingRange[0], parseInt(e.target.value)])}
-                className="flex-1"
+                className="flex-1 accent-[var(--warm-brown)]"
               />
             </div>
           </div>
 
           {/* Page Count Range */}
           <div>
-            <label className="block text-sm font-bold mb-2" style={{ color: '#5d4e37' }}>
-              Page Count: {filters.pageRange[0]} - {filters.pageRange[1] === 2000 ? '2000+' : filters.pageRange[1]}
+            <label className="block text-sm font-black mb-3 flex items-center justify-between" style={{ color: 'var(--text-dark)' }}>
+              <span>Page Count</span>
+              <span className="px-3 py-1 rounded-full text-xs font-black" style={{
+                background: 'var(--gradient-accent)',
+                color: 'white'
+              }}>
+                {filters.pageRange[0]} - {filters.pageRange[1] === 2000 ? '2000+' : filters.pageRange[1]}
+              </span>
             </label>
             <div className="flex gap-4 items-center">
               <input
@@ -196,33 +226,48 @@ export function AdvancedSearch({
                 max="2000"
                 value={filters.pageRange[0]}
                 onChange={(e) => updateFilter('pageRange', [parseInt(e.target.value) || 0, filters.pageRange[1]])}
-                className="w-24 px-3 py-2 rounded-lg border-2"
-                style={{ borderColor: 'rgba(139, 111, 71, 0.3)' }}
+                className="w-28 px-4 py-2.5 rounded-xl border-2 font-bold text-center transition-all duration-300 focus:outline-none focus:shadow-lg"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-dark)'
+                }}
               />
-              <span className="text-sm font-bold" style={{ color: '#8b6f47' }}>to</span>
+              <span className="text-sm font-bold px-3 py-1 rounded-lg" style={{
+                color: 'var(--text-dark)',
+                background: 'var(--bg-tertiary)'
+              }}>to</span>
               <input
                 type="number"
                 min="0"
                 max="2000"
                 value={filters.pageRange[1]}
                 onChange={(e) => updateFilter('pageRange', [filters.pageRange[0], parseInt(e.target.value) || 2000])}
-                className="w-24 px-3 py-2 rounded-lg border-2"
-                style={{ borderColor: 'rgba(139, 111, 71, 0.3)' }}
+                className="w-28 px-4 py-2.5 rounded-xl border-2 font-bold text-center transition-all duration-300 focus:outline-none focus:shadow-lg"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-dark)'
+                }}
               />
             </div>
           </div>
 
           {/* Status, Genre, and Collection Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div>
-              <label className="block text-sm font-bold mb-2" style={{ color: 'var(--text-dark)' }}>
+              <label className="block text-sm font-black mb-3" style={{ color: 'var(--text-dark)' }}>
                 Reading Status
               </label>
               <select
                 value={filters.statusFilter}
                 onChange={(e) => updateFilter('statusFilter', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2"
-                style={{ borderColor: 'var(--border-color)', color: 'var(--text-dark)', background: 'var(--bg-secondary)' }}
+                className="w-full px-4 py-3.5 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none focus:shadow-lg cursor-pointer"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-dark)',
+                  background: 'var(--bg-secondary)'
+                }}
               >
                 <option value="">All Statuses</option>
                 <option value="Want to Read">📚 Want to Read</option>
@@ -232,14 +277,18 @@ export function AdvancedSearch({
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-2" style={{ color: 'var(--text-dark)' }}>
+              <label className="block text-sm font-black mb-3" style={{ color: 'var(--text-dark)' }}>
                 Genre
               </label>
               <select
                 value={filters.genreFilter}
                 onChange={(e) => updateFilter('genreFilter', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2"
-                style={{ borderColor: 'var(--border-color)', color: 'var(--text-dark)', background: 'var(--bg-secondary)' }}
+                className="w-full px-4 py-3.5 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none focus:shadow-lg cursor-pointer"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-dark)',
+                  background: 'var(--bg-secondary)'
+                }}
               >
                 <option value="">All Genres</option>
                 {availableGenres.map((genre) => (
@@ -251,14 +300,18 @@ export function AdvancedSearch({
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-2" style={{ color: 'var(--text-dark)' }}>
+              <label className="block text-sm font-black mb-3" style={{ color: 'var(--text-dark)' }}>
                 Collection
               </label>
               <select
                 value={filters.collectionFilter}
                 onChange={(e) => updateFilter('collectionFilter', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2"
-                style={{ borderColor: 'var(--border-color)', color: 'var(--text-dark)', background: 'var(--bg-secondary)' }}
+                className="w-full px-4 py-3.5 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none focus:shadow-lg cursor-pointer"
+                style={{
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-dark)',
+                  background: 'var(--bg-secondary)'
+                }}
               >
                 <option value="">All Collections</option>
                 {availableCollections.map((collection) => (
@@ -271,49 +324,71 @@ export function AdvancedSearch({
           </div>
 
           {/* Date Ranges */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div>
-              <label className="block text-sm font-bold mb-2" style={{ color: '#5d4e37' }}>
+              <label className="block text-sm font-black mb-3" style={{ color: 'var(--text-dark)' }}>
                 Date Added
               </label>
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-3 items-center">
                 <input
                   type="date"
                   value={filters.dateAddedFrom}
                   onChange={(e) => updateFilter('dateAddedFrom', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: 'rgba(139, 111, 71, 0.3)' }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none focus:shadow-lg cursor-pointer"
+                  style={{
+                    borderColor: 'var(--border-color)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-dark)'
+                  }}
                 />
-                <span className="text-sm" style={{ color: '#8b6f47' }}>to</span>
+                <span className="text-sm font-bold px-3 py-1 rounded-lg" style={{
+                  color: 'var(--text-dark)',
+                  background: 'var(--bg-tertiary)'
+                }}>to</span>
                 <input
                   type="date"
                   value={filters.dateAddedTo}
                   onChange={(e) => updateFilter('dateAddedTo', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: 'rgba(139, 111, 71, 0.3)' }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none focus:shadow-lg cursor-pointer"
+                  style={{
+                    borderColor: 'var(--border-color)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-dark)'
+                  }}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-bold mb-2" style={{ color: '#5d4e37' }}>
+              <label className="block text-sm font-black mb-3" style={{ color: 'var(--text-dark)' }}>
                 Date Finished
               </label>
-              <div className="flex gap-2 items-center">
+              <div className="flex gap-3 items-center">
                 <input
                   type="date"
                   value={filters.dateFinishedFrom}
                   onChange={(e) => updateFilter('dateFinishedFrom', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: 'rgba(139, 111, 71, 0.3)' }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none focus:shadow-lg cursor-pointer"
+                  style={{
+                    borderColor: 'var(--border-color)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-dark)'
+                  }}
                 />
-                <span className="text-sm" style={{ color: '#8b6f47' }}>to</span>
+                <span className="text-sm font-bold px-3 py-1 rounded-lg" style={{
+                  color: 'var(--text-dark)',
+                  background: 'var(--bg-tertiary)'
+                }}>to</span>
                 <input
                   type="date"
                   value={filters.dateFinishedTo}
                   onChange={(e) => updateFilter('dateFinishedTo', e.target.value)}
-                  className="flex-1 px-3 py-2 rounded-lg border-2"
-                  style={{ borderColor: 'rgba(139, 111, 71, 0.3)' }}
+                  className="flex-1 px-4 py-2.5 rounded-xl border-2 font-bold transition-all duration-300 focus:outline-none focus:shadow-lg cursor-pointer"
+                  style={{
+                    borderColor: 'var(--border-color)',
+                    background: 'var(--bg-secondary)',
+                    color: 'var(--text-dark)'
+                  }}
                 />
               </div>
             </div>

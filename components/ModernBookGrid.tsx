@@ -1,4 +1,4 @@
-import { Book } from '@/lib/hooks/useBooks';
+import { Book } from '@/app/page';
 import { ModernBookCard } from './ModernBookCard';
 import { BookOpen } from 'lucide-react';
 
