@@ -9,9 +9,10 @@ interface ShelfProps {
   label?: string;
   highlightedBookIds?: Set<string>;
   index?: number;
+  genreLabel?: string;
 }
 
-export function Shelf({ books, bookColors, onBookClick, label, highlightedBookIds, index = 0 }: ShelfProps) {
+export function Shelf({ books, bookColors, onBookClick, label, highlightedBookIds, index = 0, genreLabel }: ShelfProps) {
   const shelfVariants = {
     hidden: { opacity: 0, y: 50, rotateX: -15 },
     visible: {
@@ -33,6 +34,29 @@ export function Shelf({ books, bookColors, onBookClick, label, highlightedBookId
       className="shelf-container"
       variants={shelfVariants}
     >
+      {/* Genre Label */}
+      {genreLabel && (
+        <motion.div
+          className="mb-4 flex items-center gap-3"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: index * 0.1 }}
+        >
+          <div className="flex items-center gap-2">
+            <div className="h-px flex-grow bg-gradient-to-r from-transparent via-[var(--warm-brown)] to-transparent opacity-30" style={{ width: '30px' }} />
+            <span className="text-lg font-black tracking-wide" style={{
+              color: 'var(--warm-brown)',
+              fontFamily: 'Playfair Display, serif',
+              textTransform: 'uppercase',
+              letterSpacing: '0.1em',
+            }}>
+              {genreLabel}
+            </span>
+            <div className="h-px flex-grow bg-gradient-to-r from-[var(--warm-brown)] to-transparent opacity-30" style={{ width: '100px' }} />
+          </div>
+        </motion.div>
+      )}
+
       {/* Shelf Label */}
       {label && (
         <motion.div

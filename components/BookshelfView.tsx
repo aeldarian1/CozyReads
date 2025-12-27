@@ -55,11 +55,27 @@ export function BookshelfView({ books, onBookClick, searchQuery }: BookshelfView
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Create shelves by grouping books
-  const shelves = [];
-  for (let i = 0; i < books.length; i += booksPerShelf) {
-    shelves.push(books.slice(i, i + booksPerShelf));
-  }
+  // Group books by genre, then create shelves
+  const genreGroups = new Map<string, typeof books>();
+  books.forEach((book) => {
+    const genre = book.genre || 'Other';
+    if (!genreGroups.has(genre)) {
+      genreGroups.set(genre, []);
+    }
+    genreGroups.get(genre)!.push(book);
+  });
+
+  // Create shelves with genre labels
+  const shelves: Array<{ books: typeof books; genre: string }> = [];
+  genreGroups.forEach((genreBooks, genre) => {
+    // Split each genre into multiple shelves if needed
+    for (let i = 0; i < genreBooks.length; i += booksPerShelf) {
+      shelves.push({
+        books: genreBooks.slice(i, i + booksPerShelf),
+        genre: i === 0 ? genre : '', // Only show label on first shelf of each genre
+      });
+    }
+  });
 
   // Highlight books matching search query
   const highlightedBookIds = new Set<string>();
@@ -195,16 +211,17 @@ export function BookshelfView({ books, onBookClick, searchQuery }: BookshelfView
           </div>
         </div>
 
-        {/* CSS-based Bookshelf - Much Better! */}
+        {/* CSS-based Bookshelf with Genre Labels */}
         <div className="relative z-10 space-y-8">
-          {shelves.map((shelfBooks, index) => (
+          {shelves.map((shelf, index) => (
             <Shelf
               key={index}
-              books={shelfBooks}
+              books={shelf.books}
               bookColors={bookColors}
               onBookClick={onBookClick}
               highlightedBookIds={highlightedBookIds}
               index={index}
+              genreLabel={shelf.genre}
             />
           ))}
         </div>
