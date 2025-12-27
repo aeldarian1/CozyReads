@@ -17,6 +17,7 @@ import { QuickEditMenu } from '@/components/QuickEditMenu';
 import { ImportGoodreadsModal } from '@/components/ImportGoodreadsModal';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
+import { BulkEnrichment } from '@/components/BulkEnrichment';
 import { useKeyboardShortcuts } from '@/lib/hooks/useKeyboardShortcuts';
 
 export type Book = {
@@ -537,6 +538,11 @@ export default function Home() {
             currentlyReading={currentlyReading}
             stats={stats}
           />
+
+          {/* Bulk Enrichment */}
+          <div className="mb-8">
+            <BulkEnrichment />
+          </div>
 
           {/* Quick Filter Tabs */}
           <QuickFilterTabs
