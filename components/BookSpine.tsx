@@ -119,14 +119,18 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
       }}
       title={`${book.title} by ${book.author}${book.rating > 0 ? ` • ${'★'.repeat(book.rating)}` : ''}`}
     >
-      {/* Book spine (front face) - Modern gradient design */}
+      {/* Book spine (front face) - Modern design with cover image */}
       <motion.div
         className="book-spine absolute inset-0"
         style={{
-          background: `linear-gradient(135deg,
-            ${bookColor} 0%,
-            ${bookColor}ee 50%,
-            ${bookColor}cc 100%)`,
+          background: book.coverUrl
+            ? `linear-gradient(135deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1)), url(${book.coverUrl})`
+            : `linear-gradient(135deg,
+                ${bookColor} 0%,
+                ${bookColor}ee 50%,
+                ${bookColor}cc 100%)`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
           border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.2)'}`,
           borderRadius: '4px 0 0 4px',
           boxShadow: isHighlighted
