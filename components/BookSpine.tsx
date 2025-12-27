@@ -182,68 +182,70 @@ export function BookSpine({ book, color, onClick, isHighlighted = false }: BookS
           }}
         />
 
-        {/* Vertical title text */}
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-between overflow-hidden"
-          style={{
-            padding: '10px 0',
-          }}
-        >
-          {/* Title - top section */}
+        {/* Vertical title text - only show when no cover image */}
+        {!book.coverUrl && (
           <div
+            className="absolute inset-0 flex flex-col items-center justify-between overflow-hidden"
             style={{
-              writingMode: 'vertical-rl',
-              textOrientation: 'mixed',
-              maxHeight: `${height - 65}px`,
-              overflow: 'hidden',
+              padding: '10px 0',
             }}
           >
-            <span
-              className="font-bold tracking-wide"
+            {/* Title - top section */}
+            <div
               style={{
-                color: '#f5f1e8',
-                fontSize: width > 45 ? '13px' : '11px',
-                textShadow: '0 2px 6px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.7)',
-                letterSpacing: '0.8px',
-                fontFamily: 'Playfair Display, Georgia, serif',
-                display: 'block',
-                whiteSpace: 'nowrap',
+                writingMode: 'vertical-rl',
+                textOrientation: 'mixed',
+                maxHeight: `${height - 65}px`,
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
               }}
             >
-              {book.title.toUpperCase()}
-            </span>
-          </div>
+              <span
+                className="font-bold tracking-wide"
+                style={{
+                  color: '#f5f1e8',
+                  fontSize: width > 45 ? '13px' : '11px',
+                  textShadow: '0 2px 6px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.7)',
+                  letterSpacing: '0.8px',
+                  fontFamily: 'Playfair Display, Georgia, serif',
+                  display: 'block',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {book.title.toUpperCase()}
+              </span>
+            </div>
 
-          {/* Author - bottom section */}
-          <div
-            style={{
-              writingMode: 'vertical-rl',
-              textOrientation: 'mixed',
-              maxHeight: '55px',
-              overflow: 'hidden',
-            }}
-          >
-            <span
-              className="font-medium"
+            {/* Author - bottom section */}
+            <div
               style={{
-                color: '#f5f1e8',
-                fontSize: width > 45 ? '10px' : '9px',
-                textShadow: '0 1px 4px rgba(0, 0, 0, 0.8)',
-                letterSpacing: '0.5px',
-                fontFamily: 'Playfair Display, Georgia, serif',
-                opacity: 0.9,
-                display: 'block',
-                whiteSpace: 'nowrap',
+                writingMode: 'vertical-rl',
+                textOrientation: 'mixed',
+                maxHeight: '55px',
                 overflow: 'hidden',
-                textOverflow: 'ellipsis',
               }}
             >
-              {book.author}
-            </span>
+              <span
+                className="font-medium"
+                style={{
+                  color: '#f5f1e8',
+                  fontSize: width > 45 ? '10px' : '9px',
+                  textShadow: '0 1px 4px rgba(0, 0, 0, 0.8)',
+                  letterSpacing: '0.5px',
+                  fontFamily: 'Playfair Display, Georgia, serif',
+                  opacity: 0.9,
+                  display: 'block',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                {book.author}
+              </span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Reading Progress Bar for Currently Reading */}
         {book.readingStatus === 'Currently Reading' && book.currentPage && book.totalPages && (
