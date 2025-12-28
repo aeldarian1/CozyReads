@@ -33,8 +33,18 @@ export default function SeriesPage() {
 
   const loadSeries = async () => {
     try {
-      const response = await fetch('/api/books');
-      const books = await response.json();
+      const response = await fetch('/api/books?limit=1000');
+      const result = await response.json();
+
+      // Handle error response
+      if (result.error) {
+        console.error('API Error:', result.error);
+        setSeriesList([]);
+        return;
+      }
+
+      // Extract books from paginated response
+      const books = result.data || [];
 
       // Group books by series
       const seriesMap = new Map<string, Book[]>();
