@@ -102,17 +102,26 @@ export default function RecommendationsPage() {
         body: JSON.stringify({ isbn: book.isbn }),
       });
 
-      let bookData = {
+      let bookData: any = {
         title: book.title,
         author: book.author,
-        coverUrl: book.coverUrl,
-        genre: book.genre,
-        status: 'TO_READ',
+        coverUrl: book.coverUrl || '',
+        genre: book.genre || '',
+        description: book.description || '',
+        readingStatus: 'Want to Read',
+        rating: 0,
+        isbn: book.isbn || '',
       };
 
       if (enrichResponse.ok) {
         const enriched = await enrichResponse.json();
-        bookData = { ...bookData, ...enriched };
+        // Merge enriched data but preserve our defaults
+        bookData = {
+          ...bookData,
+          ...enriched,
+          readingStatus: 'Want to Read', // Always set as Want to Read
+          rating: enriched.rating || 0,
+        };
       }
 
       // Add the book to the library
