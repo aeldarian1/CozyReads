@@ -584,17 +584,23 @@ function RecommendationSection({ recommendation, router }: any) {
 function RecommendationItem({ item, type, router }: any) {
   const [isHovered, setIsHovered] = useState(false);
 
-  const getAction = () => {
+  const handleClick = () => {
     switch (type) {
       case 'favorite_genres':
       case 'explore_new':
-        return () => router.push(`/?genre=${encodeURIComponent(item)}`);
+        router.push(`/?genre=${encodeURIComponent(item)}`);
+        break;
       case 'favorite_authors':
-        return () => router.push(`/?author=${encodeURIComponent(item)}`);
+        router.push(`/?author=${encodeURIComponent(item)}`);
+        break;
       case 'incomplete_series':
-        return () => router.push('/');
+        router.push(`/?series=${encodeURIComponent(item)}`);
+        break;
+      case 'reading_challenge':
+        router.push('/goals');
+        break;
       default:
-        return () => {};
+        break;
     }
   };
 
@@ -609,7 +615,7 @@ function RecommendationItem({ item, type, router }: any) {
         transform: isHovered ? 'translateY(-4px)' : 'translateY(0)',
         boxShadow: isHovered ? '0 8px 24px rgba(201, 169, 97, 0.2)' : '0 2px 8px rgba(0, 0, 0, 0.05)',
       }}
-      onClick={getAction()}
+      onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

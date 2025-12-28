@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
+import { useSearchParams } from 'next/navigation';
 import Fuse from 'fuse.js';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useDialog } from '@/contexts/DialogContext';
@@ -50,6 +51,7 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
   const { confirm, alert } = useDialog();
   const toast = useToast();
+  const searchParams = useSearchParams();
 
   // Use React Query hooks for data fetching and mutations
   const { data: booksData, isLoading: isBooksLoading, refetch: refetchBooks } = useBooks({ limit: 1000 });
@@ -130,6 +132,31 @@ export default function Home() {
   useEffect(() => {
     loadCollections();
   }, []);
+
+  // Apply URL parameters as filters (from recommendations page navigation)
+  useEffect(() => {
+    const genre = searchParams.get('genre');
+    const author = searchParams.get('author');
+    const series = searchParams.get('series');
+
+    if (genre || author || series) {
+      setFilters((prev) => ({
+        ...prev,
+        genreFilter: genre || prev.genreFilter,
+        searchQuery: author || series || prev.searchQuery,
+        searchFields: author ? ['author'] : series ? ['series'] : prev.searchFields,
+      }));
+
+      // Show a toast to indicate the filter was applied
+      if (genre) {
+        toast.success(`Filtering by genre: ${genre}`);
+      } else if (author) {
+        toast.success(`Filtering by author: ${author}`);
+      } else if (series) {
+        toast.success(`Filtering by series: ${series}`);
+      }
+    }
+  }, [searchParams, toast]);
 
   const loadCollections = async () => {
     try {
