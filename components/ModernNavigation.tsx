@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   BookOpen,
-  Lightbulb,
   Target,
   LibraryBig,
   BarChart3,
@@ -46,7 +45,6 @@ export function ModernNavigation({
 
   const navItems = [
     { icon: BookOpen, label: 'Library', href: '/' },
-    { icon: Lightbulb, label: 'Discover', href: '/recommendations' },
     { icon: Target, label: 'Goals', href: '/goals' },
     { icon: LibraryBig, label: 'Series', href: '/series' },
     { icon: BarChart3, label: 'Statistics', href: '/statistics' },

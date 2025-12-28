@@ -133,7 +133,7 @@ export default function Home() {
     loadCollections();
   }, []);
 
-  // Apply URL parameters as filters (from recommendations page navigation)
+  // Apply URL parameters as filters
   useEffect(() => {
     const genre = searchParams.get('genre');
     const author = searchParams.get('author');
