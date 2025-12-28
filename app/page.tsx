@@ -156,7 +156,8 @@ export default function Home() {
         toast.success(`Filtering by series: ${series}`);
       }
     }
-  }, [searchParams, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const loadCollections = async () => {
     try {
