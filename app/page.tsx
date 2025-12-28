@@ -157,7 +157,7 @@ export default function Home() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams.get('genre'), searchParams.get('author'), searchParams.get('series')]);
 
   const loadCollections = async () => {
     try {
