@@ -1,43 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
-
-// Helper function to get or create user
-async function getOrCreateUser(clerkUser: any) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUser.id },
-  });
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUser.id,
-        email: clerkUser.emailAddresses[0]?.emailAddress || '',
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-        imageUrl: clerkUser.imageUrl,
-      },
-    });
-  }
-
-  return user;
-}
+import { getAuthenticatedUser } from '@/lib/auth-middleware';
+import { bookSchema, paginationSchema, bookFilterSchema } from '@/lib/schemas';
+import { PaginatedResponse, Book } from '@/types';
 
 // GET all books with pagination and filters
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
-
+    const user = await getAuthenticatedUser();
     const searchParams = request.nextUrl.searchParams;
 
     // Pagination
@@ -133,56 +103,38 @@ export async function GET(request: NextRequest) {
 // POST - Create a new book
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
-
+    const user = await getAuthenticatedUser();
     const body = await request.json();
-    const {
-      title,
-      author,
-      isbn,
-      genre,
-      description,
-      coverUrl,
-      readingStatus,
-      rating,
-      review,
-      notes,
-      series,
-      seriesNumber,
-    } = body;
 
-    if (!title || !author) {
+    // Validate input with Zod
+    const validation = bookSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Title and author are required' },
+        { error: 'Validation failed', details: validation.error.issues },
         { status: 400 }
       );
     }
 
+    const data = validation.data;
+
     const book = await prisma.book.create({
       data: {
         userId: user.id,
-        title,
-        author,
-        isbn: isbn || null,
-        genre: genre || null,
-        description: description || null,
-        coverUrl: coverUrl || null,
-        readingStatus: readingStatus || 'Want to Read',
-        rating: rating || 0,
-        review: review || null,
-        notes: notes || null,
-        series: series || null,
-        seriesNumber: seriesNumber || null,
+        title: data.title,
+        author: data.author,
+        isbn: data.isbn || null,
+        genre: data.genre || null,
+        description: data.description || null,
+        coverUrl: data.coverUrl || null,
+        readingStatus: data.readingStatus,
+        rating: data.rating,
+        review: data.review || null,
+        notes: data.notes || null,
+        currentPage: data.currentPage || null,
+        totalPages: data.totalPages || null,
+        series: data.series || null,
+        seriesNumber: data.seriesNumber || null,
+        dateFinished: data.dateFinished || null,
       },
     });
 

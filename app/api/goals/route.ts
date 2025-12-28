@@ -1,42 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
-
-// Helper function to get or create user
-async function getOrCreateUser(clerkUser: any) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUser.id },
-  });
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUser.id,
-        email: clerkUser.emailAddresses[0]?.emailAddress || '',
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-        imageUrl: clerkUser.imageUrl,
-      },
-    });
-  }
-
-  return user;
-}
+import { getAuthenticatedUser } from '@/lib/auth-middleware';
+import { readingGoalSchema } from '@/lib/schemas';
 
 // GET all goals for user
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
+    const user = await getAuthenticatedUser();
 
     const goals = await prisma.readingGoal.findMany({
       where: { userId: user.id },
@@ -56,46 +26,39 @@ export async function GET(request: NextRequest) {
 // POST - Create or update a goal
 export async function POST(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
+    const user = await getAuthenticatedUser();
     const body = await request.json();
-    const { year, targetBooks, targetPages, description } = body;
 
-    if (!year || !targetBooks) {
+    // Validate input with Zod
+    const validation = readingGoalSchema.safeParse(body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'Year and target books are required' },
+        { error: 'Validation failed', details: validation.error.issues },
         { status: 400 }
       );
     }
+
+    const data = validation.data;
 
     // Upsert goal (create or update if exists)
     const goal = await prisma.readingGoal.upsert({
       where: {
         userId_year: {
           userId: user.id,
-          year: parseInt(year),
+          year: data.year,
         },
       },
       update: {
-        targetBooks: parseInt(targetBooks),
-        targetPages: targetPages ? parseInt(targetPages) : null,
-        description: description || null,
+        targetBooks: data.targetBooks,
+        targetPages: data.targetPages || null,
+        description: data.description || null,
       },
       create: {
         userId: user.id,
-        year: parseInt(year),
-        targetBooks: parseInt(targetBooks),
-        targetPages: targetPages ? parseInt(targetPages) : null,
-        description: description || null,
+        year: data.year,
+        targetBooks: data.targetBooks,
+        targetPages: data.targetPages || null,
+        description: data.description || null,
       },
     });
 
@@ -112,17 +75,7 @@ export async function POST(request: NextRequest) {
 // DELETE goal
 export async function DELETE(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
+    const user = await getAuthenticatedUser();
     const { searchParams } = new URL(request.url);
     const year = searchParams.get('year');
 

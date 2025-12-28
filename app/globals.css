@@ -529,3 +529,138 @@ select:focus-visible {
 .page-transition {
   animation: pageEnter 0.5s ease-out;
 }
+
+/* ============================================
+   Safe Area Support for Mobile Devices
+   ============================================ */
+
+/* iOS safe area insets */
+@supports (padding: env(safe-area-inset-top)) {
+  :root {
+    --safe-area-top: env(safe-area-inset-top);
+    --safe-area-right: env(safe-area-inset-right);
+    --safe-area-bottom: env(safe-area-inset-bottom);
+    --safe-area-left: env(safe-area-inset-left);
+  }
+}
+
+/* Fallback for browsers that don't support safe area insets */
+@supports not (padding: env(safe-area-inset-top)) {
+  :root {
+    --safe-area-top: 0px;
+    --safe-area-right: 0px;
+    --safe-area-bottom: 0px;
+    --safe-area-left: 0px;
+  }
+}
+
+/* Utility classes for safe area padding */
+.safe-top {
+  padding-top: var(--safe-area-top);
+}
+
+.safe-right {
+  padding-right: var(--safe-area-right);
+}
+
+.safe-bottom {
+  padding-bottom: var(--safe-area-bottom);
+}
+
+.safe-left {
+  padding-left: var(--safe-area-left);
+}
+
+.safe-x {
+  padding-left: var(--safe-area-left);
+  padding-right: var(--safe-area-right);
+}
+
+.safe-y {
+  padding-top: var(--safe-area-top);
+  padding-bottom: var(--safe-area-bottom);
+}
+
+.safe-all {
+  padding-top: var(--safe-area-top);
+  padding-right: var(--safe-area-right);
+  padding-bottom: var(--safe-area-bottom);
+  padding-left: var(--safe-area-left);
+}
+
+/* Height utilities that account for safe areas */
+.h-safe-bottom {
+  height: var(--safe-area-bottom);
+}
+
+.min-h-screen-safe {
+  min-height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom));
+}
+
+/* ============================================
+   Animation Utilities
+   ============================================ */
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Animation utility classes */
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
+}
+
+.animate-fadeOut {
+  animation: fadeOut 0.25s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.4s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.animate-slideDown {
+  animation: slideDown 0.4s cubic-bezier(0, 0, 0.2, 1);
+}
+
+.animate-scaleIn {
+  animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}

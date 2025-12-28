@@ -1,27 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
-
-// Helper function to get or create user
-async function getOrCreateUser(clerkUser: any) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUser.id },
-  });
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUser.id,
-        email: clerkUser.emailAddresses[0]?.emailAddress || '',
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-        imageUrl: clerkUser.imageUrl,
-      },
-    });
-  }
-
-  return user;
-}
+import { getAuthenticatedUser } from '@/lib/auth-middleware';
+import { collectionSchema } from '@/lib/schemas';
 
 // GET single collection
 export async function GET(
@@ -29,17 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
+    const user = await getAuthenticatedUser();
     const { id } = await params;
 
     const collection = await prisma.collection.findFirst({
@@ -73,23 +43,29 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
+    const user = await getAuthenticatedUser();
     const { id } = await params;
     const body = await request.json();
 
+    // Validate input with Zod
+    const validation = collectionSchema.safeParse(body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: validation.error.issues },
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
+
     const collection = await prisma.collection.updateMany({
       where: { id, userId: user.id },
-      data: body,
+      data: {
+        name: data.name,
+        description: data.description || null,
+        color: data.color,
+        icon: data.icon,
+      },
     });
 
     if (collection.count === 0) {
@@ -116,17 +92,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
+    const user = await getAuthenticatedUser();
     const { id } = await params;
 
     const result = await prisma.collection.deleteMany({

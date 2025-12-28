@@ -1,44 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { prisma } from '@/lib/prisma';
+import { getAuthenticatedUser } from '@/lib/auth-middleware';
 import { parseGoodreadsCSV } from '@/lib/csv-parser';
 import { importGoodreadsBooks } from '@/lib/import-service';
-
-// Helper function to get or create user (same as in books/route.ts)
-async function getOrCreateUser(clerkUser: any) {
-  let user = await prisma.user.findUnique({
-    where: { clerkId: clerkUser.id },
-  });
-
-  if (!user) {
-    user = await prisma.user.create({
-      data: {
-        clerkId: clerkUser.id,
-        email: clerkUser.emailAddresses[0]?.emailAddress || '',
-        firstName: clerkUser.firstName,
-        lastName: clerkUser.lastName,
-        imageUrl: clerkUser.imageUrl,
-      },
-    });
-  }
-
-  return user;
-}
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Authentication
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
+    const user = await getAuthenticatedUser();
 
     // 2. Parse multipart form data
     const formData = await request.formData();
@@ -286,17 +255,7 @@ export async function POST(request: NextRequest) {
 // GET endpoint to retrieve import history
 export async function GET(request: NextRequest) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const clerkUser = await currentUser();
-    if (!clerkUser) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const user = await getOrCreateUser(clerkUser);
+    const user = await getAuthenticatedUser();
 
     const history = await prisma.importHistory.findMany({
       where: { userId: user.id },

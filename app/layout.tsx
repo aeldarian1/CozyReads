@@ -3,9 +3,11 @@ import { Merriweather, Playfair_Display, Open_Sans } from 'next/font/google';
 import { ClerkProvider } from '@clerk/nextjs';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { DialogProvider } from '@/contexts/DialogContext';
 import { QueryProvider } from '@/components/QueryProvider';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PageTransition } from '@/components/PageTransition';
+import { ScreenReaderAnnouncer } from '@/components/accessibility/ScreenReaderAnnouncer';
 import "./globals.css";
 
 const merriweather = Merriweather({
@@ -49,9 +51,12 @@ export default function RootLayout({
             <QueryProvider>
               <ThemeProvider>
                 <ToastProvider>
-                  <PageTransition>
-                    {children}
-                  </PageTransition>
+                  <DialogProvider>
+                    <ScreenReaderAnnouncer />
+                    <PageTransition>
+                      {children}
+                    </PageTransition>
+                  </DialogProvider>
                 </ToastProvider>
               </ThemeProvider>
             </QueryProvider>

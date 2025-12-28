@@ -22,14 +22,19 @@ export function BulkEnrichment() {
         method: 'POST',
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Bulk enrichment failed');
+        // Show specific error from API if available
+        const errorMessage = data.error || data.message || 'Bulk enrichment failed';
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
       setResult(data);
     } catch (err) {
-      setError('Failed to enrich books. Please try again.');
+      // Show specific error message instead of generic one
+      const errorMessage = err instanceof Error ? err.message : 'Failed to enrich books. Please try again.';
+      setError(errorMessage);
       console.error('Bulk enrichment error:', err);
     } finally {
       setIsEnriching(false);
@@ -141,9 +146,24 @@ export function BulkEnrichment() {
       </button>
 
       {isEnriching && (
-        <p className="text-xs text-center mt-3 font-medium animate-pulse" style={{ color: 'var(--text-muted)' }}>
-          This may take a few minutes depending on your library size...
-        </p>
+        <div className="mt-4 space-y-2">
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-300"
+              style={{
+                background: 'linear-gradient(90deg, #c9a961 0%, #d4a574 100%)',
+                width: '100%',
+                animation: 'pulse 2s ease-in-out infinite'
+              }}
+            />
+          </div>
+          <p className="text-xs text-center font-medium" style={{ color: 'var(--text-muted)' }}>
+            Enriching books... This may take a few minutes depending on your library size.
+          </p>
+          <p className="text-xs text-center font-medium" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>
+            Processing at ~200ms per book with Google Books API
+          </p>
+        </div>
       )}
     </div>
   );

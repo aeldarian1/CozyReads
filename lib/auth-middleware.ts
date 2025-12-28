@@ -34,6 +34,21 @@ export async function getOrCreateUser(clerkUser: any): Promise<User> {
   return user;
 }
 
+// Main authentication function to be used in API routes
+export async function getAuthenticatedUser(): Promise<User> {
+  const { userId: clerkUserId } = await auth();
+  if (!clerkUserId) {
+    throw new Error('Unauthorized');
+  }
+
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    throw new Error('Unauthorized');
+  }
+
+  return await getOrCreateUser(clerkUser);
+}
+
 // Middleware wrapper for authenticated routes
 export async function withAuth<T>(
   handler: (request: NextRequest, user: User) => Promise<NextResponse<T>>

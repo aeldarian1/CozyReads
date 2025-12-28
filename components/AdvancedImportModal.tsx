@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 
 type ImportSource = 'goodreads' | 'librarything' | 'calibre' | 'storygraph' | 'csv' | 'json';
-type ImportStep = 'source' | 'upload' | 'mapping' | 'preview' | 'importing' | 'complete';
+type ImportStep = 'source' | 'upload' | 'preview' | 'importing' | 'complete';
 
 interface ImportConfig {
   source: ImportSource;

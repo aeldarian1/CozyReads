@@ -13,6 +13,8 @@ interface BulkActionsBarProps {
   onChangeStatus: (status: string) => void;
   onExport: () => void;
   collections: { id: string; name: string; icon: string; color: string }[];
+  isDeleting?: boolean;
+  isUpdating?: boolean;
 }
 
 export function BulkActionsBar({
@@ -25,9 +27,12 @@ export function BulkActionsBar({
   onChangeStatus,
   onExport,
   collections,
+  isDeleting = false,
+  isUpdating = false,
 }: BulkActionsBarProps) {
   const [showCollectionMenu, setShowCollectionMenu] = useState(false);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const isLoading = isDeleting || isUpdating;
 
   if (selectedCount === 0) return null;
 
@@ -68,21 +73,23 @@ export function BulkActionsBar({
         {/* Delete */}
         <button
           onClick={onDelete}
-          className="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105"
+          disabled={isLoading}
+          className="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           style={{
             background: 'linear-gradient(135deg, #c74444 0%, #a93838 100%)',
             color: '#fff',
             border: '1px solid rgba(255, 255, 255, 0.3)',
           }}
         >
-          🗑️ Delete
+          {isDeleting ? '⏳ Deleting...' : '🗑️ Delete'}
         </button>
 
         {/* Add to Collection */}
         <div className="relative">
           <button
             onClick={() => setShowCollectionMenu(!showCollectionMenu)}
-            className="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105"
+            disabled={isLoading}
+            className="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             style={{
               background: 'rgba(255, 255, 255, 0.2)',
               color: '#fff',
@@ -130,14 +137,15 @@ export function BulkActionsBar({
         <div className="relative">
           <button
             onClick={() => setShowStatusMenu(!showStatusMenu)}
-            className="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105"
+            disabled={isLoading}
+            className="px-4 py-2 rounded-lg font-semibold transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
             style={{
               background: 'rgba(255, 255, 255, 0.2)',
               color: '#fff',
               border: '1px solid rgba(255, 255, 255, 0.3)',
             }}
           >
-            📖 Change Status
+            {isUpdating ? '⏳ Updating...' : '📖 Change Status'}
           </button>
           {showStatusMenu && (
             <div

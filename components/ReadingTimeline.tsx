@@ -236,13 +236,13 @@ export function ReadingTimeline() {
 
                             {/* Reading Stats */}
                             <div className="flex flex-wrap gap-3 mb-2">
-                              {session.pagesRead !== null && session.pagesRead > 0 && (
+                              {session.pagesRead != null && session.pagesRead > 0 && (
                                 <div className="flex items-center gap-1 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
                                   <BookOpen className="w-4 h-4" strokeWidth={2} />
                                   <span>{session.pagesRead} pages</span>
                                 </div>
                               )}
-                              {session.duration !== null && session.duration > 0 && (
+                              {session.duration != null && session.duration > 0 && (
                                 <div className="flex items-center gap-1 text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
                                   <Clock className="w-4 h-4" strokeWidth={2} />
                                   <span>{session.duration} min</span>
@@ -288,7 +288,7 @@ function StatCard({
   value,
   color,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number; color?: string }>;
   label: string;
   value: number;
   color: string;
@@ -306,7 +306,7 @@ function StatCard({
           className="p-2 rounded-lg"
           style={{ background: `${color}20` }}
         >
-          <Icon className="w-5 h-5" style={{ color }} strokeWidth={2.5} />
+          <Icon className="w-5 h-5" color={color} strokeWidth={2.5} />
         </div>
         <div className="text-3xl font-black" style={{ color }}>
           {value.toLocaleString()}

@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import Fuse from 'fuse.js';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useDialog } from '@/contexts/DialogContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useBooks, useUpdateBook, useDeleteBook, type Book as BookType } from '@/lib/hooks/useBooks';
 import { ModernNavigation } from '@/components/ModernNavigation';
 import { ModernDashboard } from '@/components/ModernDashboard';
 import { VirtualizedBookGrid } from '@/components/VirtualizedBookGrid';
@@ -12,46 +16,49 @@ import { BookshelfView } from '@/components/BookshelfView';
 import { ViewToggle, ViewMode } from '@/components/ViewToggle';
 import { AdvancedSearch, AdvancedFilters } from '@/components/AdvancedSearch';
 import { AddBookModal } from '@/components/AddBookModal';
-import { ViewBookModal } from '@/components/ViewBookModal';
 import { QuickEditMenu } from '@/components/QuickEditMenu';
 import { ImportGoodreadsModal } from '@/components/ImportGoodreadsModal';
-import { AdvancedImportModal } from '@/components/AdvancedImportModal';
 import { BulkActionsBar } from '@/components/BulkActionsBar';
 import { KeyboardShortcutsHelp } from '@/components/KeyboardShortcutsHelp';
 import { BulkEnrichment } from '@/components/BulkEnrichment';
 import { useKeyboardShortcuts } from '@/lib/hooks/useKeyboardShortcuts';
+import { Spinner } from '@/components/ui/Spinner';
 
-export type Book = {
-  id: string;
-  title: string;
-  author: string;
-  isbn?: string | null;
-  genre?: string | null;
-  description?: string | null;
-  coverUrl?: string | null;
-  readingStatus: string;
-  rating: number;
-  review?: string | null;
-  notes?: string | null;
-  currentPage?: number | null;
-  totalPages?: number | null;
-  series?: string | null;
-  seriesNumber?: number | null;
-  dateAdded: string;
-  dateFinished?: string | null;
-  collections?: {
-    collection: {
-      id: string;
-      name: string;
-      color: string;
-      icon: string;
-    };
-  }[];
-};
+// Lazy load heavy modals for better performance
+const ViewBookModal = dynamic(() => import('@/components/ViewBookModal').then(mod => ({ default: mod.ViewBookModal })), {
+  loading: () => (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+      <Spinner size="lg" />
+    </div>
+  ),
+  ssr: false,
+});
+
+const AdvancedImportModal = dynamic(() => import('@/components/AdvancedImportModal').then(mod => ({ default: mod.AdvancedImportModal })), {
+  loading: () => (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+      <Spinner size="lg" />
+    </div>
+  ),
+  ssr: false,
+});
+
+// Use the Book type from the hooks file
+export type Book = BookType;
 
 export default function Home() {
   const { theme, toggleTheme } = useTheme();
-  const [books, setBooks] = useState<Book[]>([]);
+  const { confirm, alert } = useDialog();
+  const toast = useToast();
+
+  // Use React Query hooks for data fetching and mutations
+  const { data: booksData, isLoading: isBooksLoading, refetch: refetchBooks } = useBooks({ limit: 1000 });
+  const updateBookMutation = useUpdateBook();
+  const deleteBookMutation = useDeleteBook();
+
+  // Extract books from the response
+  const books = booksData?.data || [];
+
   const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
   const [collections, setCollections] = useState<{ id: string; name: string; icon: string; color: string }[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -68,6 +75,8 @@ export default function Home() {
     book: Book;
     position: { x: number; y: number };
   } | null>(null);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   // Load view mode preference from localStorage
   useEffect(() => {
@@ -117,9 +126,8 @@ export default function Home() {
     return Array.from(genres).sort();
   }, [books]);
 
-  // Load books and collections
+  // Load collections on mount (books are loaded by useBooks hook)
   useEffect(() => {
-    loadBooks();
     loadCollections();
   }, []);
 
@@ -127,33 +135,6 @@ export default function Home() {
   useEffect(() => {
     applyFilters();
   }, [books, filters, sortBy]);
-
-  const loadBooks = async () => {
-    try {
-      const response = await fetch('/api/books?limit=1000'); // Load all books for client-side filtering
-      if (!response.ok) {
-        if (response.status === 401) {
-          // User not authenticated, will be redirected by middleware
-          return;
-        }
-        throw new Error(`Failed to load books: ${response.status}`);
-      }
-      const result = await response.json();
-
-      // Handle both old array format and new paginated format
-      if (Array.isArray(result)) {
-        setBooks(result);
-      } else if (result.data && Array.isArray(result.data)) {
-        setBooks(result.data);
-      } else {
-        console.error('Books data is not an array:', result);
-        setBooks([]);
-      }
-    } catch (error) {
-      console.error('Error loading books:', error);
-      setBooks([]);
-    }
-  };
 
   const loadCollections = async () => {
     try {
@@ -280,28 +261,30 @@ export default function Home() {
   };
 
   const handleDeleteBook = async (bookId: string) => {
-    if (!confirm('Are you sure you want to delete this book?')) return;
+    const confirmed = await confirm({
+      title: 'Delete Book',
+      message: 'Are you sure you want to delete this book? This action cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    });
+
+    if (!confirmed) return;
 
     try {
-      await fetch(`/api/books/${bookId}`, {
-        method: 'DELETE',
-      });
-      loadBooks();
+      await deleteBookMutation.mutateAsync(bookId);
       setIsViewModalOpen(false);
       setQuickEditMenu(null);
+      toast.success('Book deleted successfully');
     } catch (error) {
       console.error('Error deleting book:', error);
+      toast.error('Failed to delete book');
     }
   };
 
   const handleQuickUpdate = async (bookId: string, updates: Partial<Book>) => {
     try {
-      await fetch(`/api/books/${bookId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-      loadBooks();
+      await updateBookMutation.mutateAsync({ id: bookId, ...updates });
     } catch (error) {
       console.error('Error updating book:', error);
     }
@@ -343,48 +326,98 @@ export default function Home() {
     );
 
     if (validBookIds.length === 0) {
-      alert('No valid books selected for deletion.');
+      await alert({
+        title: 'No Books Selected',
+        message: 'No valid books selected for deletion.',
+        variant: 'warning',
+      });
       deselectAllBooks();
       return;
     }
 
-    if (!confirm(`Delete ${validBookIds.length} selected books?`)) return;
+    const bookWord = validBookIds.length === 1 ? 'book' : 'books';
+    const confirmed = await confirm({
+      title: 'Delete Books',
+      message: `Are you sure you want to delete ${validBookIds.length} ${bookWord}? This action cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    });
+
+    if (!confirmed) return;
+
+    setIsBulkDeleting(true);
+    const errors: string[] = [];
 
     try {
       const deletePromises = validBookIds.map(async (bookId) => {
-        const response = await fetch(`/api/books/${bookId}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+        try {
+          const response = await fetch(`/api/books/${bookId}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(`Failed to delete book ${bookId}: ${error.error || response.statusText}`);
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || response.statusText);
+          }
+
+          return { success: true, bookId };
+        } catch (err) {
+          errors.push(`Failed to delete book: ${err instanceof Error ? err.message : 'Unknown error'}`);
+          return { success: false, bookId };
         }
-
-        return response.json();
       });
 
-      await Promise.all(deletePromises);
-      loadBooks();
+      const results = await Promise.all(deletePromises);
+      const successCount = results.filter(r => r.success).length;
+
+      // Refetch books after bulk operation
+      await refetchBooks();
       deselectAllBooks();
       setIsSelectionMode(false);
+
+      if (errors.length > 0) {
+        await alert({
+          title: 'Partial Success',
+          message: `Deleted ${successCount} of ${validBookIds.length} books.\n\nErrors:\n${errors.join('\n')}`,
+          variant: 'warning',
+        });
+      } else {
+        toast.success(`Successfully deleted ${successCount} ${bookWord}`);
+      }
     } catch (error) {
       console.error('Error deleting books:', error);
-      alert(`Failed to delete some books: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      // Reload books to sync state with server
-      loadBooks();
+      toast.error(`Failed to delete books: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      await refetchBooks();
+    } finally {
+      setIsBulkDeleting(false);
     }
   };
 
   const handleBulkAddToCollection = async (collectionId: string) => {
+    // Filter out any IDs that don't exist in current books
+    const validBookIds = Array.from(selectedBookIds).filter(id =>
+      books.some(book => book.id === id)
+    );
+
+    if (validBookIds.length === 0) {
+      await alert({
+        title: 'No Books Selected',
+        message: 'No valid books selected for adding to collection.',
+        variant: 'warning',
+      });
+      deselectAllBooks();
+      return;
+    }
+
     try {
       const response = await fetch(`/api/collections/${collectionId}/books`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookIds: Array.from(selectedBookIds) }),
+        body: JSON.stringify({ bookIds: validBookIds }),
       });
 
       if (!response.ok) {
@@ -392,12 +425,16 @@ export default function Home() {
         throw new Error(error.error || 'Failed to add books to collection');
       }
 
-      loadBooks();
+      await refetchBooks();
       deselectAllBooks();
       setIsSelectionMode(false);
+      const bookWord = validBookIds.length === 1 ? 'book' : 'books';
+      toast.success(`Successfully added ${validBookIds.length} ${bookWord} to collection`);
     } catch (error) {
       console.error('Error adding books to collection:', error);
-      alert(`Failed to add books to collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      toast.error(`Failed to add books to collection: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Reload books to sync state with server
+      await refetchBooks();
     }
   };
 
@@ -408,36 +445,62 @@ export default function Home() {
     );
 
     if (validBookIds.length === 0) {
-      alert('No valid books selected for status change.');
+      await alert({
+        title: 'No Books Selected',
+        message: 'No valid books selected for status change.',
+        variant: 'warning',
+      });
       deselectAllBooks();
       return;
     }
 
+    setIsBulkUpdating(true);
+    const errors: string[] = [];
+
     try {
       const updatePromises = validBookIds.map(async (bookId) => {
-        const response = await fetch(`/api/books/${bookId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ readingStatus: status }),
-        });
+        try {
+          const response = await fetch(`/api/books/${bookId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ readingStatus: status }),
+          });
 
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(`Failed to update book ${bookId}: ${error.error || response.statusText}`);
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || response.statusText);
+          }
+
+          return { success: true, bookId };
+        } catch (err) {
+          errors.push(`Failed to update book: ${err instanceof Error ? err.message : 'Unknown error'}`);
+          return { success: false, bookId };
         }
-
-        return response.json();
       });
 
-      await Promise.all(updatePromises);
-      loadBooks();
+      const results = await Promise.all(updatePromises);
+      const successCount = results.filter(r => r.success).length;
+
+      await refetchBooks();
       deselectAllBooks();
       setIsSelectionMode(false);
+
+      if (errors.length > 0) {
+        await alert({
+          title: 'Partial Success',
+          message: `Updated ${successCount} of ${validBookIds.length} books.\n\nErrors:\n${errors.join('\n')}`,
+          variant: 'warning',
+        });
+      } else {
+        const bookWord = validBookIds.length === 1 ? 'book' : 'books';
+        toast.success(`Successfully updated ${successCount} ${bookWord}`);
+      }
     } catch (error) {
       console.error('Error changing book status:', error);
-      alert(`Failed to change book status: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      // Reload books to sync state with server
-      loadBooks();
+      toast.error(`Failed to change book status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      await refetchBooks();
+    } finally {
+      setIsBulkUpdating(false);
     }
   };
 
@@ -457,8 +520,8 @@ export default function Home() {
       book.rating,
       book.readingStatus,
       book.review || '',
-      book.dateAdded,
-      book.dateFinished || '',
+      book.dateAdded ? new Date(book.dateAdded).toISOString().split('T')[0] : '',
+      book.dateFinished ? new Date(book.dateFinished).toISOString().split('T')[0] : '',
     ]);
 
     return [
@@ -524,7 +587,7 @@ export default function Home() {
         }
       }
 
-      loadBooks();
+      await refetchBooks();
       setIsAddModalOpen(false);
       setEditingBook(null);
     } catch (error) {
@@ -684,8 +747,8 @@ export default function Home() {
             onBookClick={handleViewBook}
             onBookUpdate={handleQuickUpdate}
             onAddToCollection={(bookId) => {
-              // TODO: Show collection selection modal
-              alert('Add to collection feature - select collection modal will be implemented');
+              // TODO: Show collection selection modal (Phase 3.1.1)
+              toast.info('Collection selection feature coming soon', 'Feature Not Available');
             }}
             isSelectionMode={isSelectionMode}
             selectedBookIds={selectedBookIds}
@@ -742,7 +805,7 @@ export default function Home() {
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
         onImportComplete={() => {
-          loadBooks();
+          refetchBooks();
           loadCollections();
         }}
       />
@@ -764,6 +827,8 @@ export default function Home() {
         onChangeStatus={handleBulkStatusChange}
         onExport={handleBulkExport}
         collections={collections}
+        isDeleting={isBulkDeleting}
+        isUpdating={isBulkUpdating}
       />
     </div>
   );

@@ -48,7 +48,7 @@ export async function POST() {
     for (const book of booksToEnrich) {
       try {
         const enrichedData = await enrichBookFromGoogleBooks(
-          book.isbn || undefined,
+          book.isbn,
           book.title,
           book.author,
           false, // Not hardcover-only
