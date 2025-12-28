@@ -59,7 +59,7 @@ export default function Home() {
   // Extract books from the response
   const books = booksData?.data || [];
 
-  const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
+  // Removed filteredBooks state - now using useMemo below
   const [collections, setCollections] = useState<{ id: string; name: string; icon: string; color: string }[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -131,11 +131,6 @@ export default function Home() {
     loadCollections();
   }, []);
 
-  // Apply filters
-  useEffect(() => {
-    applyFilters();
-  }, [books, filters, sortBy]);
-
   const loadCollections = async () => {
     try {
       const response = await fetch('/api/collections');
@@ -159,7 +154,8 @@ export default function Home() {
     }
   };
 
-  const applyFilters = () => {
+  // Apply filters with useMemo to prevent infinite loops
+  const filteredBooks = useMemo(() => {
     let filtered = [...books];
 
     // 1. Fuzzy search with Fuse.js
@@ -241,8 +237,8 @@ export default function Home() {
       }
     });
 
-    setFilteredBooks(filtered);
-  };
+    return filtered;
+  }, [books, filters, sortBy, fuse]);
 
   const handleAddBook = () => {
     setEditingBook(null);
