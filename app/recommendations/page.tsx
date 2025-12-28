@@ -15,7 +15,9 @@ import {
   Bookmark,
   Users,
   Target,
-  Zap
+  Zap,
+  Loader2,
+  Check
 } from 'lucide-react';
 
 type BookRecommendation = {
@@ -26,6 +28,7 @@ type BookRecommendation = {
   genre?: string;
   reason?: string;
   isbn?: string;
+  description?: string;
 };
 
 type Recommendation = {
@@ -51,6 +54,9 @@ export default function RecommendationsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [bookSuggestions, setBookSuggestions] = useState<BookRecommendation[]>([]);
+  const [addingBooks, setAddingBooks] = useState<Set<string>>(new Set());
+  const [addedBooks, setAddedBooks] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     loadRecommendations();
@@ -73,6 +79,68 @@ export default function RecommendationsPage() {
     }
   };
 
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const addBookToLibrary = async (book: BookRecommendation) => {
+    const bookKey = book.isbn || book.title;
+
+    if (addedBooks.has(bookKey)) {
+      showToast('Book already added to your library!', 'error');
+      return;
+    }
+
+    setAddingBooks(prev => new Set(prev).add(bookKey));
+
+    try {
+      // First, try to enrich the book data
+      const enrichResponse = await fetch('/api/enrich-book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isbn: book.isbn }),
+      });
+
+      let bookData = {
+        title: book.title,
+        author: book.author,
+        coverUrl: book.coverUrl,
+        genre: book.genre,
+        status: 'TO_READ',
+      };
+
+      if (enrichResponse.ok) {
+        const enriched = await enrichResponse.json();
+        bookData = { ...bookData, ...enriched };
+      }
+
+      // Add the book to the library
+      const addResponse = await fetch('/api/books', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bookData),
+      });
+
+      if (!addResponse.ok) {
+        const error = await addResponse.json();
+        throw new Error(error.error || 'Failed to add book');
+      }
+
+      setAddedBooks(prev => new Set(prev).add(bookKey));
+      showToast(`"${book.title}" added to your library!`, 'success');
+    } catch (error) {
+      console.error('Error adding book:', error);
+      showToast(error instanceof Error ? error.message : 'Failed to add book', 'error');
+    } finally {
+      setAddingBooks(prev => {
+        const next = new Set(prev);
+        next.delete(bookKey);
+        return next;
+      });
+    }
+  };
+
   const fetchBookSuggestions = async (genre: string) => {
     try {
       const response = await fetch(
@@ -89,11 +157,13 @@ export default function RecommendationsPage() {
           genre: item.volumeInfo.categories?.[0],
           isbn: item.volumeInfo.industryIdentifiers?.[0]?.identifier,
           reason: `Popular in ${genre}`,
+          description: item.volumeInfo.description,
         }));
         setBookSuggestions(books);
       }
     } catch (error) {
       console.error('Error fetching book suggestions:', error);
+      showToast('Failed to load book suggestions', 'error');
     }
   };
 
@@ -129,6 +199,27 @@ export default function RecommendationsPage() {
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className="fixed top-6 right-6 z-[10000] px-6 py-4 rounded-xl shadow-2xl animate-slide-in-right flex items-center gap-3 max-w-md"
+          style={{
+            background: toast.type === 'success'
+              ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+              : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+            color: '#fff',
+            animation: 'slideInRight 0.3s ease-out',
+          }}
+        >
+          {toast.type === 'success' ? (
+            <Check className="w-5 h-5 flex-shrink-0" strokeWidth={2.5} />
+          ) : (
+            <span className="text-xl flex-shrink-0">⚠️</span>
+          )}
+          <p className="font-bold">{toast.message}</p>
+        </div>
+      )}
+
       {/* Elegant Header */}
       <div className="relative overflow-hidden" style={{
         background: 'linear-gradient(135deg, #5d4e37 0%, #8b6f47 50%, #a08968 100%)',
@@ -252,7 +343,13 @@ export default function RecommendationsPage() {
 
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
                   {bookSuggestions.map((book, idx) => (
-                    <BookCard key={idx} book={book} />
+                    <BookCard
+                      key={idx}
+                      book={book}
+                      onAdd={addBookToLibrary}
+                      isAdding={addingBooks.has(book.isbn || book.title)}
+                      isAdded={addedBooks.has(book.isbn || book.title)}
+                    />
                   ))}
                 </div>
               </section>
@@ -297,7 +394,17 @@ function StatCard({ icon: Icon, label, value, subtext, gradient }: any) {
   );
 }
 
-function BookCard({ book }: { book: BookRecommendation }) {
+function BookCard({
+  book,
+  onAdd,
+  isAdding,
+  isAdded,
+}: {
+  book: BookRecommendation;
+  onAdd: (book: BookRecommendation) => void;
+  isAdding: boolean;
+  isAdded: boolean;
+}) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -306,7 +413,7 @@ function BookCard({ book }: { book: BookRecommendation }) {
       className="group relative rounded-2xl overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
       style={{
         background: 'linear-gradient(135deg, rgba(249, 247, 243, 0.6) 0%, rgba(252, 250, 248, 0.9) 100%)',
-        border: '2px solid rgba(139, 111, 71, 0.2)',
+        border: `2px solid ${isAdded ? '#10b981' : 'rgba(139, 111, 71, 0.2)'}`,
         boxShadow: isHovered ? '0 12px 40px rgba(0, 0, 0, 0.15)' : '0 4px 12px rgba(0, 0, 0, 0.05)',
       }}
       onMouseEnter={() => setIsHovered(true)}
@@ -333,13 +440,28 @@ function BookCard({ book }: { book: BookRecommendation }) {
           style={{ background: 'rgba(93, 78, 55, 0.9)' }}
         >
           <button
-            className="px-4 py-2 rounded-lg font-bold transition-all hover:scale-110"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!isAdding && !isAdded) {
+                onAdd(book);
+              }
+            }}
+            disabled={isAdding || isAdded}
+            className="px-4 py-2 rounded-lg font-bold transition-all hover:scale-110 disabled:opacity-75 disabled:cursor-not-allowed flex items-center gap-2"
             style={{
-              background: 'linear-gradient(135deg, #c9a961 0%, #d4a574 100%)',
-              color: '#2d1f15',
+              background: isAdded
+                ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)'
+                : 'linear-gradient(135deg, #c9a961 0%, #d4a574 100%)',
+              color: isAdded ? '#fff' : '#2d1f15',
             }}
           >
-            <Plus className="w-5 h-5" strokeWidth={2.5} />
+            {isAdding ? (
+              <Loader2 className="w-5 h-5 animate-spin" strokeWidth={2.5} />
+            ) : isAdded ? (
+              <Check className="w-5 h-5" strokeWidth={2.5} />
+            ) : (
+              <Plus className="w-5 h-5" strokeWidth={2.5} />
+            )}
           </button>
         </div>
       </div>
