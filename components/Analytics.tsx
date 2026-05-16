@@ -265,7 +265,7 @@ export function Analytics({ books, onBooksUpdated }: { books: Book[]; onBooksUpd
                   border: '1px solid rgba(139, 111, 71, 0.3)',
                   borderRadius: '8px',
                 }}
-                formatter={(value: number | undefined) => [`${value || 0} books`, 'Count']}
+                formatter={(value: any) => [`${value || 0} books`, 'Count']}
               />
               <Legend
                 verticalAlign="bottom"
