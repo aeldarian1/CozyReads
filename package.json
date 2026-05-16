@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node -e \"require('fs').rmSync('.next', { recursive: true, force: true })\" && prisma generate && next build",
     "start": "next start",
     "lint": "next lint --fix",
     "lint:check": "next lint",
@@ -54,6 +54,7 @@
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
+    "@types/three": "^0.182.0",
     "autoprefixer": "^10.4.20",
     "better-sqlite3": "^12.5.0",
     "eslint": "^9.17.0",

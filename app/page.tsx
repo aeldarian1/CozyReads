@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { Suspense, useState, useEffect, useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { useSearchParams } from 'next/navigation';
 import Fuse from 'fuse.js';
@@ -28,7 +28,7 @@ import { Spinner } from '@/components/ui/Spinner';
 // Lazy load heavy modals for better performance
 const ViewBookModal = dynamic(() => import('@/components/ViewBookModal').then(mod => ({ default: mod.ViewBookModal })), {
   loading: () => (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50">
       <Spinner size="lg" />
     </div>
   ),
@@ -37,7 +37,7 @@ const ViewBookModal = dynamic(() => import('@/components/ViewBookModal').then(mo
 
 const AdvancedImportModal = dynamic(() => import('@/components/AdvancedImportModal').then(mod => ({ default: mod.AdvancedImportModal })), {
   loading: () => (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/50">
       <Spinner size="lg" />
     </div>
   ),
@@ -47,7 +47,7 @@ const AdvancedImportModal = dynamic(() => import('@/components/AdvancedImportMod
 // Use the Book type from the hooks file
 export type Book = BookType;
 
-export default function Home() {
+function HomeContent() {
   const { theme, toggleTheme } = useTheme();
   const { confirm, alert } = useDialog();
   const toast = useToast();
@@ -855,5 +855,13 @@ export default function Home() {
         isUpdating={isBulkUpdating}
       />
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   );
 }
