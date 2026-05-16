@@ -1,0 +1,16 @@
+* @aeldarian1
+
+# API Routes
+app/api/                        @aeldarian1
+
+# Components
+components/                     @aeldarian1
+
+# Library and utilities
+lib/                            @aeldarian1
+
+# Database and data models
+prisma/                         @aeldarian1
+
+# Documentation
+*.md                            @aeldarian1

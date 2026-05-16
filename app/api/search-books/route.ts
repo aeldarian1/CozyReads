@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { normalizeGenres } from '@/lib/genre-mapper';
 import { searchGoogleBooks } from '@/lib/google-books';
+import { NextRequest, NextResponse } from 'next/server';
 
 /**
  * Calculate similarity between two strings (0-1 range)
@@ -134,6 +134,7 @@ export async function GET(request: NextRequest) {
 
     // Use Hardcover GraphQL API (fastest, best quality)
     let books: any[] = [];
+    let hardcoverSucceeded = false;
 
     try {
       const hardcoverQuery = `
@@ -178,6 +179,7 @@ export async function GET(request: NextRequest) {
 
         if (hardcoverData.data?.search?.results?.hits) {
           // Filter and map results, only keeping relevant ones
+          hardcoverSucceeded = true;
           books = hardcoverData.data.search.results.hits
             .filter((hit: any) => isRelevantResult(hit, query))
             .map((hit: any) => {
@@ -263,8 +265,8 @@ export async function GET(request: NextRequest) {
       books,
       total: books.length,
       sources: {
-        hardcover: books.filter(b => !b.isbn || books.length === 0).length > 0,
-        googleBooks: shouldUseGoogleBooks
+        hardcover: hardcoverSucceeded && books.length > 0,
+        googleBooks: shouldUseGoogleBooks && books.some(b => !b.isbn)
       }
     });
   } catch (error) {

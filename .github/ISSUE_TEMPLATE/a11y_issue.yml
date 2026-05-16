@@ -1,0 +1,88 @@
+name: Accessibility Issue
+description: Report an accessibility problem
+title: "[A11Y] "
+labels: ["accessibility"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping us improve accessibility!
+        Please provide as much detail as possible.
+
+  - type: dropdown
+    id: assistive-tech
+    attributes:
+      label: Assistive Technology Used
+      options:
+        - Screen Reader (NVDA)
+        - Screen Reader (JAWS)
+        - Screen Reader (VoiceOver)
+        - Keyboard Navigation
+        - Zoom / Text Enlargement
+        - Speech Recognition
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the Issue
+      description: What accessibility issue did you encounter?
+      placeholder: Describe the problem...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. Enable screen reader
+        2. Navigate to...
+        3. Observe issue...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+      placeholder: What should work as expected...
+
+  - type: input
+    id: wcag
+    attributes:
+      label: Relevant WCAG Guidelines
+      placeholder: e.g., WCAG 2.1 Level AA 1.4.3 Contrast (Minimum)
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating System
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - iOS
+        - Android
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser & Version
+      placeholder: e.g., Chrome 120.0, Safari 17.0
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: How does this affect users?
+      placeholder: Describe who this affects and how...
+      required: true

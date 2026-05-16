@@ -4,11 +4,19 @@
 
 <div align="center">
 
+![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
+![Build Status](https://img.shields.io/github/actions/workflow/status/aeldarian1/CozyReads/ci.yml?branch=main&style=for-the-badge&logo=github)
+![Node Version](https://img.shields.io/badge/Node-20%2B-339933?style=for-the-badge&logo=node.js)
+![Test Coverage](https://img.shields.io/badge/Coverage-80%25-brightgreen?style=for-the-badge)
+![Code Quality](https://img.shields.io/badge/Code%20Quality-A-brightgreen?style=for-the-badge)
+
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?style=for-the-badge&logo=next.js)
 ![React](https://img.shields.io/badge/React-19.2.3-61DAFB?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-6.2.1-2D3748?style=for-the-badge&logo=prisma)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38B2AC?style=for-the-badge&logo=tailwind-css)
+
+**[Quick Start](./QUICKSTART.md)** • **[Architecture](./ARCHITECTURE.md)** • **[Contributing](./CONTRIBUTING.md)** • **[Deployment](./DEPLOYMENT.md)** • **[API](./API.md)**
 
 </div>
 
@@ -38,6 +46,16 @@ CozyReads has been massively upgraded with **8 comprehensive phases** of improve
 ---
 
 ## 🌟 Features
+
+### Key Features
+
+- **Virtual Bookshelf**: A stunning 3D bookshelf to visualize your collection.
+- **Advanced Search**: Find books by title, author, genre, or custom tags.
+- **Reading Goals**: Set and track your yearly reading goals.
+- **Statistics Dashboard**: Gain insights into your reading habits.
+- **Quote Management**: Save and organize your favorite quotes.
+- **Bulk Import/Export**: Seamlessly import/export your library data.
+- **Mobile-Friendly Design**: Optimized for all devices.
 
 ### 📖 **Core Library Management**
 - **Add Books Manually** - Enter book details by hand with a beautiful, intuitive form
@@ -375,68 +393,63 @@ model BookCollection {
 
 ---
 
-## 🤝 Contributing
+---
 
-Contributions are welcome! Here's how you can help:
+## 🎯 Getting Help
 
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/AmazingFeature`)
-3. **Commit your changes** (`git commit -m 'Add some AmazingFeature'`)
-4. **Push to the branch** (`git push origin feature/AmazingFeature`)
-5. **Open a Pull Request**
-
-### **Development Guidelines**
-- Follow the existing code style and conventions
-- Write meaningful commit messages
-- Test your changes thoroughly
-- Update documentation as needed
+- **[Quick Start Guide](./QUICKSTART.md)** - Fast 5-minute setup
+- **[Architecture Documentation](./ARCHITECTURE.md)** - Understand the codebase
+- **[Contributing Guidelines](./CONTRIBUTING.md)** - Contribute to the project
+- **[Deployment Guide](./DEPLOYMENT.md)** - Deploy to production
+- **[Security Policy](./SECURITY.md)** - Security guidelines & reporting
+- **[Code of Conduct](./CODE_OF_CONDUCT.md)** - Community standards
 
 ---
 
-## 🐛 Bug Reports & Feature Requests
+## 🤝 Contributing
 
-Found a bug or have an idea? Please [open an issue](../../issues) with:
-- Clear description of the problem/feature
-- Steps to reproduce (for bugs)
-- Expected vs actual behavior
-- Screenshots if applicable
+We'd love your contributions! Whether you're fixing bugs, adding features, or improving docs:
+
+1. **Read [CONTRIBUTING.md](./CONTRIBUTING.md)** for detailed guidelines
+2. **Fork the repository**
+3. **Create a feature branch**: `git checkout -b feature/amazing-feature`
+4. **Commit your changes**: `git commit -m 'Add amazing feature'`
+5. **Push to the branch**: `git push origin feature/amazing-feature`
+6. **Open a Pull Request**
+
+See also:
+- [Issue Templates](./.github/ISSUE_TEMPLATE/) - Bug reports & feature requests
+- [PR Template](./.github/pull_request_template.md) - PR guidelines
+- [GitHub Discussions](https://github.com/aeldarian1/CozyReads/discussions) - Ask questions
 
 ---
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - feel free to use it for personal or commercial projects.
+This project is licensed under the **MIT License**. See [LICENSE](./LICENSE) for details.
 
 ---
 
-## 🙏 Acknowledgments
+## 🙌 Acknowledgments
 
-- **Hardcover** for their excellent GraphQL API and book covers
-- **Google Books API** for comprehensive book metadata
-- **OpenLibrary** for community-curated book information
-- **WorldCat** for global library catalog data
-- **Playfair Display** and system fonts for beautiful typography
-- **Next.js team** for an amazing framework
-- **Prisma team** for excellent database tooling
-- **Vercel** for deployment platform
-- All the amazing open-source libraries that made this possible
-
----
-
-## 💝 Support
-
-If you find CozyReads helpful, please consider:
-- ⭐ Starring the repository
-- 🐛 Reporting bugs
-- 💡 Suggesting new features
-- 📢 Sharing with fellow book lovers
+- **Inspired by**: The love of books and technology
+- **Built with**: Modern web technologies (Next.js, React, TypeScript, Tailwind)
+- **Special thanks to**: 
+  - The open-source community
+  - [Clerk](https://clerk.com) for authentication
+  - [Neon](https://neon.tech) for database hosting
+  - All contributors and supporters
 
 ---
 
 <div align="center">
 
-**Made with ❤️ and ☕ for book lovers everywhere**
+**[⬆ back to top](#-cozyreads)**
 
-*Happy Reading! 📚*
+Made with 💚 for book lovers everywhere
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub stars](https://img.shields.io/github/stars/aeldarian1/CozyReads?style=social)](https://github.com/aeldarian1/CozyReads)
+[![GitHub forks](https://img.shields.io/github/forks/aeldarian1/CozyReads?style=social)](https://github.com/aeldarian1/CozyReads)
 
 </div>

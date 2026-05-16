@@ -1,0 +1,88 @@
+### Get All Books
+GET http://localhost:3000/api/books
+
+### Get Book by ID
+GET http://localhost:3000/api/books/550e8400-e29b-41d4-a716-446655440000
+
+### Create Book
+POST http://localhost:3000/api/books
+Content-Type: application/json
+
+{
+  "title": "The Great Gatsby",
+  "author": "F. Scott Fitzgerald",
+  "isbn": "978-0-7432-7356-5",
+  "genre": "Fiction",
+  "description": "A classic American novel about the Jazz Age",
+  "readingStatus": "Finished",
+  "rating": 5
+}
+
+### Update Book
+PATCH http://localhost:3000/api/books/550e8400-e29b-41d4-a716-446655440000
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "review": "Great book, highly recommend!",
+  "readingStatus": "Finished"
+}
+
+### Delete Book
+DELETE http://localhost:3000/api/books/550e8400-e29b-41d4-a716-446655440000
+
+### Search Books
+GET http://localhost:3000/api/search-books?q=gatsby&source=google-books
+
+### Get Collections
+GET http://localhost:3000/api/collections
+
+### Create Collection
+POST http://localhost:3000/api/collections
+Content-Type: application/json
+
+{
+  "name": "Fantasy",
+  "icon": "🧙",
+  "color": "#8b6f47",
+  "description": "Fantasy novels and series"
+}
+
+### Add Book to Collection
+POST http://localhost:3000/api/collections/col-id-123/books
+Content-Type: application/json
+
+{
+  "bookId": "550e8400-e29b-41d4-a716-446655440000"
+}
+
+### Get Statistics
+GET http://localhost:3000/api/statistics
+
+### Get Reading Goals
+GET http://localhost:3000/api/goals
+
+### Get Quotes
+GET http://localhost:3000/api/quotes
+
+### Create Quote
+POST http://localhost:3000/api/quotes
+Content-Type: application/json
+
+{
+  "text": "It is a truth universally acknowledged that a single man in possession of a good fortune must be in want of a wife.",
+  "bookId": "550e8400-e29b-41d4-a716-446655440000",
+  "pageNumber": 1
+}
+
+### Import from CSV
+POST http://localhost:3000/api/import
+Content-Type: multipart/form-data
+
+file=@books.csv
+
+### Import from Goodreads
+POST http://localhost:3000/api/import/goodreads
+Content-Type: multipart/form-data
+
+file=@goodreads_export.csv
