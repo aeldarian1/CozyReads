@@ -127,7 +127,7 @@ export function AddBookModal({
     }
   }, [isOpen, editingBook]);
 
-  const searchGoogleBooks = async () => {
+  const searchBooks = async () => {
     if (!apiSearch.trim()) return;
 
     setIsSearching(true);
@@ -361,7 +361,7 @@ export function AddBookModal({
                       d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
                     />
                   </svg>
-                  Search Google Books
+                  Search Books
                 </h3>
                 <p className="text-xs mt-1 opacity-90" style={{ color: 'var(--bg-primary)' }}>Find and auto-fill book information</p>
               </div>
@@ -374,7 +374,7 @@ export function AddBookModal({
                     placeholder="Search by title, author, or ISBN..."
                     value={apiSearch}
                     onChange={(e) => setApiSearch(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), searchGoogleBooks())}
+                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), searchBooks())}
                     className="w-full px-4 py-3 pr-24 rounded-xl border-2 transition-all focus:outline-none focus:ring-2 text-base"
                     style={{
                       borderColor: 'var(--border-color)',
@@ -400,7 +400,7 @@ export function AddBookModal({
                   )}
                   <button
                     type="button"
-                    onClick={searchGoogleBooks}
+                    onClick={searchBooks}
                     disabled={isSearching || !apiSearch.trim()}
                     className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 rounded-lg font-bold transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
                     style={{

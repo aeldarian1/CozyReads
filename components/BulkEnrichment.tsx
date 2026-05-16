@@ -74,7 +74,7 @@ export function BulkEnrichment() {
       {!result && !error && (
         <p className="text-sm mb-4 font-medium" style={{ color: 'var(--text-muted)' }}>
           Click below to automatically enrich all books in your library that are missing cover images or descriptions.
-          This will fetch data from Google Books and other sources.
+          This will fetch data from Hardcover and other sources.
         </p>
       )}
 
@@ -161,7 +161,7 @@ export function BulkEnrichment() {
             Enriching books... This may take a few minutes depending on your library size.
           </p>
           <p className="text-xs text-center font-medium" style={{ color: 'var(--text-muted)', opacity: 0.7 }}>
-            Processing at ~200ms per book with Google Books API
+            Processing books via Hardcover API...
           </p>
         </div>
       )}

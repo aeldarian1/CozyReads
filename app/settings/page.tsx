@@ -254,7 +254,7 @@ export default function SettingsPage() {
                 />
                 <div className="flex-1">
                   <p className="font-semibold" style={{ color: 'var(--text-dark)' }}>
-                    Auto-Enrich Books from Google Books
+                    Auto-Enrich Books
                   </p>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     Automatically fetch covers, descriptions, and metadata when adding books

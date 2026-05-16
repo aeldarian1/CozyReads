@@ -50,7 +50,7 @@ export function ImportGoodreadsModal({
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [createCollections, setCreateCollections] = useState(true);
   const [enrichFromGoogle, setEnrichFromGoogle] = useState(true);
-  const [fastMode, setFastMode] = useState(false);
+  
   const [currentStep, setCurrentStep] = useState<ImportStep>('upload');
   const [parsedBooks, setParsedBooks] = useState<ParsedBook[]>([]);
   const [selectedBookIndices, setSelectedBookIndices] = useState<Set<number>>(new Set());
@@ -155,7 +155,7 @@ export function ImportGoodreadsModal({
         formData.append('skipDuplicates', String(skipDuplicates));
         formData.append('createCollections', String(createCollections));
         formData.append('enrichFromGoogle', String(enrichFromGoogle));
-        formData.append('fastMode', String(fastMode));
+        
         formData.append('selectedIndices', JSON.stringify(Array.from(selectedBookIndices)));
         formData.append('manuallySelectedBooks', JSON.stringify(Object.fromEntries(manuallySelectedBooks)));
       }
@@ -211,17 +211,7 @@ export function ImportGoodreadsModal({
   };
 
   const handleBookSelected = async (bookId: string, selectedData: any) => {
-    const volumeInfo = selectedData.volumeInfo;
-
-    // Extract data from Google Books result
-    const updateData = {
-      description: volumeInfo.description || undefined,
-      coverUrl: volumeInfo.imageLinks?.thumbnail?.replace('http://', 'https://') || undefined,
-      genre: volumeInfo.categories?.join(', ') || undefined,
-      publisher: volumeInfo.publisher || undefined,
-      publishedDate: volumeInfo.publishedDate || undefined,
-      totalPages: volumeInfo.pageCount || undefined,
-    };
+    const updateData = { description: selectedData.description, coverUrl: selectedData.coverUrl, genre: selectedData.genre, publisher: selectedData.publisher, publishedDate: selectedData.publishedDate, totalPages: selectedData.pageCount };
 
     // Remove undefined values
     const cleanData = Object.fromEntries(
@@ -451,7 +441,7 @@ export function ImportGoodreadsModal({
                   />
                   <div>
                     <p className="font-semibold" style={{ color: 'var(--text-dark)' }}>
-                      Fetch covers & genres from Google Books
+                      Fetch covers & genres
                     </p>
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                       Automatically fetch missing book covers, genres, and descriptions (recommended)
@@ -459,28 +449,7 @@ export function ImportGoodreadsModal({
                   </div>
                 </label>
 
-                {enrichFromGoogle && (
-                  <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl transition-all hover:bg-opacity-50 ml-8" style={{
-                    background: 'var(--bg-tertiary)',
-                    borderLeft: '3px solid var(--warm-brown)',
-                  }}>
-                    <input
-                      type="checkbox"
-                      checked={fastMode}
-                      onChange={(e) => setFastMode(e.target.checked)}
-                      className="w-5 h-5 rounded"
-                    />
-                    <div>
-                      <p className="font-semibold flex items-center gap-2" style={{ color: 'var(--text-dark)' }}>
-                        <span>⚡</span>
-                        Fast Mode
-                      </p>
-                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                        2-3x faster imports for large libraries (100+ books). Uses Google Books only.
-                      </p>
-                    </div>
-                  </label>
-                )}
+                
               </div>
 
               {/* Error Display */}

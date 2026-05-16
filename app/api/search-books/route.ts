@@ -1,5 +1,4 @@
 import { normalizeGenres } from '@/lib/genre-mapper';
-import { searchGoogleBooks } from '@/lib/google-books';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -235,38 +234,11 @@ export async function GET(request: NextRequest) {
       console.error('Hardcover search failed:', hardcoverError);
     }
 
-    // If Hardcover returned few results, supplement with Google Books
-    const shouldUseGoogleBooks = books.length < 5;
-
-    if (shouldUseGoogleBooks) {
-      console.log('Using Google Books as fallback (Hardcover returned < 5 results)');
-
-      try {
-        const googleBooks = await searchGoogleBooks(query, 10);
-
-        if (googleBooks.length > 0) {
-          console.log(`Google Books returned ${googleBooks.length} results`);
-
-          // Combine results
-          const allBooks = [...books, ...googleBooks];
-
-          // Deduplicate by ISBN and title
-          books = deduplicateBooks(allBooks);
-
-          console.log(`After deduplication: ${books.length} total results`);
-        }
-      } catch (googleError) {
-        console.error('Google Books search failed:', googleError);
-        // Continue with Hardcover results only
-      }
-    }
-
     return NextResponse.json({
       books,
       total: books.length,
       sources: {
-        hardcover: hardcoverSucceeded && books.length > 0,
-        googleBooks: shouldUseGoogleBooks && books.some(b => !b.isbn)
+        hardcover: hardcoverSucceeded && books.length > 0
       }
     });
   } catch (error) {

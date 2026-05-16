@@ -26,7 +26,7 @@ export async function importGoodreadsBooks(
     skipDuplicates: boolean;
     createCollections: boolean;
     enrichFromGoogle: boolean;
-    fastMode?: boolean; // Use fast Google Books enrichment (faster but single source)
+
   }
 ): Promise<ImportResult> {
   const result: ImportResult = {
@@ -142,19 +142,12 @@ export async function importGoodreadsBooks(
 
           if (options.enrichFromGoogle) {
             try {
-              // Choose enrichment strategy based on options
-              // Fast mode: Single Google Books call (fastest)
-              // Hardcover-only: Single Hardcover call (fast, modern books)
-              // Full mode: Multi-source validation (slowest, most accurate)
-              const useFastMode = options.fastMode === true;
-              const useHardcoverOnly = !useFastMode; // Default to Hardcover-only for speed
-
               enrichedData = await enrichBookFromGoogleBooks(
                 book.isbn,
                 book.title,
                 book.author,
-                useHardcoverOnly, // hardcoverOnly
-                useFastMode       // fastMode
+                true, // hardcoverOnly
+                false // fastMode
               );
             } catch (error) {
               // Continue without enrichment if it fails

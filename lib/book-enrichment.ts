@@ -1,5 +1,4 @@
 import { normalizeGenre } from './genre-mapper';
-import { searchGoogleBooks } from './google-books';
 
 /**
  * Calculate similarity between two strings (0-1 range)
@@ -109,8 +108,7 @@ function selectBestCover(covers: Array<{ url: string | null; source: string }>):
     let score = 0;
 
     // Source reliability (Google Books is most reliable for covers)
-    if (cover.source === 'google') score += 40;
-    else if (cover.source === 'hardcover') score += 30;
+    if (cover.source === 'hardcover') score += 30;
     else if (cover.source === 'worldcat') score += 20;
     else if (cover.source === 'openlibrary') score += 10;
 
@@ -128,15 +126,7 @@ function selectBestCover(covers: Array<{ url: string | null; source: string }>):
     // Avoid placeholder/default images
     if (url.includes('no-cover') || url.includes('default') || url.includes('placeholder')) score -= 50;
 
-    // Google Books specific quality indicators
-    if (cover.source === 'google' && url.includes('zoom=')) {
-      // Extract zoom level (higher is better)
-      const zoomMatch = url.match(/zoom=(\d)/);
-      if (zoomMatch) {
-        const zoomLevel = parseInt(zoomMatch[1]);
-        score += zoomLevel * 3;
-      }
-    }
+    
 
     return { ...cover, score };
   });
@@ -171,8 +161,7 @@ function selectBestDescription(descriptions: Array<{ text: string | null; source
     }
 
     // Source reliability for descriptions
-    if (desc.source === 'google') score += 25; // Google Books usually has good descriptions
-    else if (desc.source === 'hardcover') score += 20;
+    if (desc.source === 'hardcover') score += 20;
     else if (desc.source === 'worldcat') score += 15;
     else if (desc.source === 'openlibrary') score += 10;
 
@@ -408,7 +397,6 @@ function isMatchingBook(
  * @param title - Book title
  * @param author - Book author
  * @param hardcoverOnly - If true, only use Hardcover API (faster but less comprehensive)
- * @param fastMode - If true, use optimized Google Books service for speed (recommended for bulk imports)
  */
 export async function enrichBookFromGoogleBooks(
   isbn: string | null,
@@ -432,33 +420,6 @@ export async function enrichBookFromGoogleBooks(
     publishedDate: null as string | null,
     pageCount: null as number | null,
   };
-
-  // Fast Mode: Use optimized Google Books service for bulk imports
-  if (fastMode) {
-    try {
-      const searchQuery = isbn || `${title} ${author}`;
-      const googleResults = await searchGoogleBooks(searchQuery, 3);
-
-      if (googleResults.length > 0) {
-        // Use first result (usually most relevant)
-        const book = googleResults[0];
-
-        result.coverUrl = book.coverUrl || null;
-        result.description = book.description || null;
-        result.genre = book.genre || null;
-        result.publisher = book.publisher || null;
-        result.publishedDate = book.publishedDate || null;
-        result.pageCount = book.totalPages || null;
-
-        console.log(`Fast mode: Enriched "${title}" from Google Books`);
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Fast mode enrichment failed:', error);
-      return result;
-    }
-  }
 
   try {
     // Try Hardcover first (fastest, best quality for modern books)
@@ -489,40 +450,25 @@ export async function enrichBookFromGoogleBooks(
       return result;
     }
 
-    // ALWAYS query Google Books for critical data validation
-    // Google Books is very reliable and helps catch incorrect Hardcover data
-    let google = null;
     let openLib = null;
     let worldCat = null;
 
-    // Strategy: Always fetch from Google Books (most reliable)
-    // Only fetch from OpenLibrary/WorldCat if we're missing critical data
     const hardcoverHasGoodData = hardcover && hardcover.coverUrl && hardcover.description;
 
     if (!hardcoverHasGoodData) {
       // If Hardcover is missing data, query all sources
-      const [googleResult, openLibraryResult, worldCatResult] = await Promise.allSettled([
-        fetchFromGoogleBooks(isbn, title, author),
+      const [openLibraryResult, worldCatResult] = await Promise.allSettled([
         fetchFromOpenLibrary(isbn, title, author),
         fetchFromWorldCat(isbn, title, author)
       ]);
 
-      google = googleResult.status === 'fulfilled' ? googleResult.value : null;
       openLib = openLibraryResult.status === 'fulfilled' ? openLibraryResult.value : null;
       worldCat = worldCatResult.status === 'fulfilled' ? worldCatResult.value : null;
-    } else {
-      // Hardcover has data, but still check Google Books for validation/better data
-      try {
-        google = await fetchFromGoogleBooks(isbn, title, author);
-      } catch (error) {
-        // Google Books failed, continue with Hardcover data
-      }
     }
 
     // Smart cover selection: Score each source and pick the best quality
     const coverCandidates = [
-      { url: google?.coverUrl || null, source: 'google' },
-      { url: hardcover?.coverUrl || null, source: 'hardcover' },
+            { url: hardcover?.coverUrl || null, source: 'hardcover' },
       { url: worldCat?.coverUrl || null, source: 'worldcat' },
       { url: openLib?.coverUrl || null, source: 'openlibrary' },
     ];
@@ -530,8 +476,7 @@ export async function enrichBookFromGoogleBooks(
 
     // Smart description selection: Score based on length, quality, and language
     const descriptionCandidates = [
-      { text: google?.description || null, source: 'google' },
-      { text: hardcover?.description || null, source: 'hardcover' },
+            { text: hardcover?.description || null, source: 'hardcover' },
       { text: worldCat?.description || null, source: 'worldcat' },
       { text: openLib?.description || null, source: 'openlibrary' },
     ];
@@ -551,20 +496,19 @@ export async function enrichBookFromGoogleBooks(
       });
     };
 
-    addNormalizedGenres(google?.genre);
-    addNormalizedGenres(hardcover?.genre);
+        addNormalizedGenres(hardcover?.genre);
     addNormalizedGenres(openLib?.genre);
     addNormalizedGenres(worldCat?.genre);
 
     result.genre = genres.size > 0 ? Array.from(genres).slice(0, 3).join(', ') : null;
 
     // Cross-validate metadata from all sources for accuracy
-    const validation = crossValidateData(google, hardcover, worldCat, openLib, title, author);
+    const validation = crossValidateData(null, hardcover, worldCat, openLib, title, author);
 
     // Use consensus-based metadata (more reliable than single source)
-    result.publisher = validation.publisherConsensus || google?.publisher || hardcover?.publisher || null;
-    result.publishedDate = validation.dateConsensus || google?.publishedDate || hardcover?.publishedDate || null;
-    result.pageCount = validation.pageCountConsensus || google?.pageCount || hardcover?.pageCount || null;
+    result.publisher = validation.publisherConsensus || hardcover?.publisher || null;
+    result.publishedDate = validation.dateConsensus || hardcover?.publishedDate || null;
+    result.pageCount = validation.pageCountConsensus || hardcover?.pageCount || null;
 
     // Log confidence levels for debugging (low confidence = potential data quality issue)
     if (validation.titleConfidence < 0.5) {
@@ -576,157 +520,6 @@ export async function enrichBookFromGoogleBooks(
 
   } catch (error) {
     console.error('Error enriching book data:', error);
-  }
-
-  return result;
-}
-
-async function fetchFromGoogleBooks(isbn: string | null, title: string, author: string) {
-  const result = {
-    coverUrl: null as string | null,
-    genre: null as string | null,
-    description: null as string | null,
-    publisher: null as string | null,
-    publishedDate: null as string | null,
-    pageCount: null as number | null,
-  };
-
-  try {
-    // Normalize and clean ISBN (support both ISBN-10 and ISBN-13)
-    const cleanISBN = isbn ? isbn.replace(/[-\s='"]/g, '') : null;
-
-    // Clean title variations
-    const cleanTitle = title.trim();
-    const cleanAuthor = author.trim();
-    const titleWithoutSeries = cleanTitle.replace(/\s*\([^)]*\)\s*/g, '').trim();
-    const titleBeforeColon = cleanTitle.split(':')[0].trim();
-    const titleBeforeColonNoSeries = titleBeforeColon.replace(/\s*\([^)]*\)\s*/g, '').trim();
-    const authorLastName = cleanAuthor.split(' ').pop();
-
-    // Try multiple search strategies for better accuracy
-    const searchStrategies = [];
-
-    if (cleanISBN) {
-      // Strategy 1: ISBN search (most accurate)
-      searchStrategies.push(`isbn:${cleanISBN}`);
-
-      // Strategy 1b: Try ISBN variants (10 vs 13)
-      const isbnVariants = getISBNVariants(cleanISBN);
-      isbnVariants.forEach(variant => {
-        if (variant !== cleanISBN) {
-          searchStrategies.push(`isbn:${variant}`);
-        }
-      });
-    }
-
-    // Strategy 2: Title variations + author
-    searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:"${cleanAuthor}"`);
-
-    if (titleBeforeColon !== cleanTitle) {
-      searchStrategies.push(`intitle:"${titleBeforeColon}"+inauthor:"${cleanAuthor}"`);
-    }
-
-    if (titleWithoutSeries !== cleanTitle) {
-      searchStrategies.push(`intitle:"${titleWithoutSeries}"+inauthor:"${cleanAuthor}"`);
-    }
-
-    if (titleBeforeColonNoSeries !== cleanTitle && titleBeforeColonNoSeries !== titleBeforeColon) {
-      searchStrategies.push(`intitle:"${titleBeforeColonNoSeries}"+inauthor:"${cleanAuthor}"`);
-    }
-
-    // Strategy 3: Title variations with author last name
-    if (authorLastName && authorLastName.length > 2) {
-      searchStrategies.push(`intitle:"${cleanTitle}"+inauthor:${authorLastName}`);
-
-      if (titleBeforeColon !== cleanTitle) {
-        searchStrategies.push(`intitle:"${titleBeforeColon}"+inauthor:${authorLastName}`);
-      }
-    }
-
-    // Strategy 4: Fallback without quotes (broader search)
-    searchStrategies.push(`intitle:${cleanTitle}+inauthor:${cleanAuthor}`);
-
-    if (titleBeforeColon !== cleanTitle) {
-      searchStrategies.push(`intitle:${titleBeforeColon}+inauthor:${cleanAuthor}`);
-    }
-
-    // Strategy 5: Just title if all else fails
-    searchStrategies.push(`intitle:"${cleanTitle}"`);
-
-    // Try each strategy until we get results
-    for (const searchQuery of searchStrategies) {
-      try {
-        const response = await fetchWithRetry(
-          `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(searchQuery)}&maxResults=5`
-        );
-
-        if (!response.ok) continue;
-
-        const data = await response.json();
-
-        if (!data.items || data.items.length === 0) continue;
-
-        // Find the best match from results
-        const book = findBestMatch(data.items, title, author);
-        const volumeInfo = book.volumeInfo;
-
-        // Extract cover URL (prefer high quality)
-        if (volumeInfo.imageLinks) {
-          let coverUrl =
-            volumeInfo.imageLinks.extraLarge ||
-            volumeInfo.imageLinks.large ||
-            volumeInfo.imageLinks.medium ||
-            volumeInfo.imageLinks.thumbnail ||
-            volumeInfo.imageLinks.smallThumbnail;
-
-          // Upgrade to HTTPS and remove parameters for better quality
-          if (coverUrl) {
-            coverUrl = coverUrl.replace('http://', 'https://');
-            coverUrl = coverUrl.replace('&zoom=1', '');
-            coverUrl = coverUrl.replace('&edge=curl', '');
-            // Increase image size by replacing size parameter
-            coverUrl = coverUrl.replace('zoom=1', 'zoom=0');
-            result.coverUrl = coverUrl;
-          }
-        }
-
-        // Extract genre (categories)
-        if (volumeInfo.categories && volumeInfo.categories.length > 0) {
-          result.genre = volumeInfo.categories.join(', ');
-        }
-
-        // Extract description
-        if (volumeInfo.description) {
-          result.description = volumeInfo.description;
-        }
-
-        // Extract publisher
-        if (volumeInfo.publisher) {
-          result.publisher = volumeInfo.publisher;
-        }
-
-        // Extract published date
-        if (volumeInfo.publishedDate) {
-          result.publishedDate = volumeInfo.publishedDate;
-        }
-
-        // Extract page count
-        if (volumeInfo.pageCount && volumeInfo.pageCount > 0) {
-          result.pageCount = volumeInfo.pageCount;
-        }
-
-        // If we found good results, break out of the loop
-        if (result.coverUrl || result.description) {
-          break;
-        }
-      } catch (strategyError) {
-        console.error(`Google Books strategy "${searchQuery}" failed:`, strategyError);
-        continue;
-      }
-    }
-
-  } catch (error) {
-    console.error('Error fetching from Google Books:', error);
   }
 
   return result;

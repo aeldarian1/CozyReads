@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const skipDuplicates = formData.get('skipDuplicates') === 'true';
     const createCollections = formData.get('createCollections') === 'true';
     const enrichFromGoogle = formData.get('enrichFromGoogle') === 'true';
-    const fastMode = formData.get('fastMode') === 'true'; // Use fast Google Books enrichment
+
     const selectedIndicesStr = formData.get('selectedIndices') as string | null;
     const manuallySelectedBooksStr = formData.get('manuallySelectedBooks') as string | null;
 
@@ -145,20 +145,7 @@ export async function POST(request: NextRequest) {
             let bookToImport = book;
             if (manuallySelectedBooks[originalIndex]) {
               const selectedData = manuallySelectedBooks[originalIndex];
-              const volumeInfo = selectedData.volumeInfo;
-
-              // Merge Google Books data with CSV data
-              bookToImport = {
-                ...book,
-                isbn: volumeInfo.industryIdentifiers?.[0]?.identifier || book.isbn,
-                description: volumeInfo.description || book.description,
-                coverUrl: volumeInfo.imageLinks?.thumbnail?.replace('http://', 'https://') || book.coverUrl,
-                genre: volumeInfo.categories?.join(', ') || book.genre,
-                publisher: volumeInfo.publisher || book.publisher,
-                publishedDate: volumeInfo.publishedDate || book.publishedDate,
-                totalPages: volumeInfo.pageCount || book.totalPages,
-              };
-            }
+              bookToImport = { ...book, isbn: selectedData.isbn || book.isbn, description: selectedData.description || book.description, coverUrl: selectedData.coverUrl || book.coverUrl, genre: selectedData.genre || book.genre, publisher: selectedData.publisher || book.publisher, publishedDate: selectedData.publishedDate || book.publishedDate, totalPages: selectedData.pageCount || book.totalPages }; }
 
             // Send progress update
             const progressData = {
@@ -175,7 +162,6 @@ export async function POST(request: NextRequest) {
                 skipDuplicates,
                 createCollections,
                 enrichFromGoogle,
-                fastMode,
               });
 
               results.totalProcessed += singleResult.totalProcessed;
