@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Generate Prisma Client
+      run: npx prisma generate
+      
+    - name: Type Check
+      run: npx tsc --noEmit
+      
+    - name: Build
+      run: npm run build
+      env:
+        # Dummy keys required to bypass build-time environment variable checks
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_dummy
+        CLERK_SECRET_KEY: sk_test_dummy
+        DATABASE_URL: "file:./dev.db"

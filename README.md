@@ -4,11 +4,19 @@
 
 <div align="center">
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-View_Site-4CAF50?style=for-the-badge)](https://cozyreads.vercel.app/)
+[![Repository](https://img.shields.io/badge/GitHub-View_Code-181717?style=for-the-badge&logo=github)](https://github.com/aeldarian1/CozyReads)
+<br/>
+
 ![Next.js](https://img.shields.io/badge/Next.js-16.1.1-black?style=for-the-badge&logo=next.js)
 ![React](https://img.shields.io/badge/React-19.2.3-61DAFB?style=for-the-badge&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-6.2.1-2D3748?style=for-the-badge&logo=prisma)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind-v4-38B2AC?style=for-the-badge&logo=tailwind-css)
+<br/>
+
+<!-- Upload a real screenshot to your repository and update this link -->
+<img src="https://via.placeholder.com/1000x500/fdf8f3/8b6f47?text=CozyReads+Dashboard+Screenshot" alt="CozyReads Screenshot" width="800" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);" />
 
 </div>
 
