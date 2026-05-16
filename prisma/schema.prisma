@@ -1,0 +1,195 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id @default(uuid())
+  clerkId     String       @unique
+  email       String       @unique
+  firstName   String?
+  lastName    String?
+  imageUrl    String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  books           Book[]
+  collections     Collection[]
+  quotes          Quote[]
+  importHistory   ImportHistory[]
+  readingGoals    ReadingGoal[]
+  readingSessions ReadingSession[]
+
+  @@index([clerkId])
+  @@index([email])
+}
+
+model Book {
+  id            String   @id @default(uuid())
+  userId        String
+  title         String
+  author        String
+  isbn          String?
+  genre         String?
+  description   String?
+  coverUrl      String?
+  readingStatus String   @default("Want to Read") // "Want to Read" | "Currently Reading" | "Finished"
+  rating        Int      @default(0)
+  review        String?  // Full review text
+  notes         String?  // Personal notes/thoughts
+  currentPage   Int?
+  totalPages    Int?
+  series        String?  // Series name (e.g., "Harry Potter")
+  seriesNumber  Int?     // Position in series (e.g., 1, 2, 3)
+  dateAdded     DateTime @default(now())
+  dateFinished  DateTime?
+
+  // External source tracking for imports
+  goodreadsId      String?
+  externalSource   String?  // "goodreads", "google-books", "manual", etc.
+  externalMetadata Json?    // Store additional metadata (shelf names, original dates, etc.)
+  importedAt       DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  collections     BookCollection[]
+  quotes          Quote[]
+  readingSessions ReadingSession[]
+
+  // Single-column indexes
+  @@index([userId])
+  @@index([title])
+  @@index([author])
+  @@index([readingStatus])
+  @@index([series])
+  @@index([rating])
+  @@index([dateAdded])
+  @@index([dateFinished])
+  @@index([genre])
+
+  // Composite indexes for common query patterns
+  @@index([userId, dateAdded(sort: Desc)]) // Most recent books
+  @@index([userId, readingStatus]) // Books by status
+  @@index([userId, rating]) // Books by rating
+  @@index([userId, genre]) // Books by genre
+  @@index([userId, series, seriesNumber]) // Series books in order
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String?
+  color       String   @default("#8b6f47") // Hex color for the collection
+  icon        String   @default("📚") // Emoji icon
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  books       BookCollection[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model BookCollection {
+  id           String     @id @default(uuid())
+  bookId       String
+  collectionId String
+  addedAt      DateTime   @default(now())
+
+  book         Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, collectionId])
+  @@index([bookId])
+  @@index([collectionId])
+}
+
+model Quote {
+  id         String   @id @default(uuid())
+  userId     String
+  bookId     String
+  text       String   @db.Text // The quote text
+  pageNumber Int?     // Optional: page number where the quote is from
+  notes      String?  @db.Text // Optional: user's thoughts about the quote
+  isFavorite Boolean  @default(false) // Mark favorite quotes
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([bookId])
+  @@index([isFavorite])
+  @@index([userId, bookId]) // Quotes for a specific user's book
+  @@index([userId, isFavorite]) // User's favorite quotes
+}
+
+model ReadingSession {
+  id          String   @id @default(uuid())
+  userId      String
+  bookId      String
+  startPage   Int?     // Page where session started
+  endPage     Int?     // Page where session ended
+  pagesRead   Int?     // Number of pages read in this session
+  duration    Int?     // Reading duration in minutes
+  sessionDate DateTime @default(now()) // When this reading session occurred
+  notes       String?  @db.Text // Optional session notes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([bookId])
+  @@index([sessionDate])
+  @@index([userId, sessionDate]) // User's reading history timeline
+  @@index([userId, bookId, sessionDate]) // Reading sessions for a specific book
+}
+
+model ImportHistory {
+  id           String   @id @default(uuid())
+  userId       String
+  source       String   // "goodreads-csv", etc.
+  fileName     String
+  totalRows    Int
+  successCount Int
+  skipCount    Int      // Duplicates skipped
+  errorCount   Int
+  errors       Json?    // Array of error details
+  importedAt   DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([importedAt])
+}
+
+model ReadingGoal {
+  id          String   @id @default(uuid())
+  userId      String
+  year        Int
+  targetBooks Int      // Number of books to read
+  targetPages Int?     // Optional: number of pages to read
+  description String?  // Optional: goal description
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, year])
+  @@index([userId])
+  @@index([year])
+}
