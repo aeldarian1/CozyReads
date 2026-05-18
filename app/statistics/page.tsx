@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
 
 type Statistics = {
@@ -359,7 +360,13 @@ export default function StatisticsPage() {
               {topRatedBooks.map((book) => (
                 <div key={book.id} className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
                   {book.coverUrl ? (
-                    <img src={book.coverUrl} alt={book.title} className="w-full h-48 object-cover" />
+                    <Image
+                      src={book.coverUrl}
+                      alt={book.title}
+                      width={240}
+                      height={320}
+                      className="w-full h-48 object-cover"
+                    />
                   ) : (
                     <div className="w-full h-48 flex items-center justify-center" style={{
                       background: 'linear-gradient(135deg, #8b6f47 0%, #a08968 100%)'
@@ -399,7 +406,13 @@ export default function StatisticsPage() {
                   border: '1px solid var(--border-color)'
                 }}>
                   {book.coverUrl ? (
-                    <img src={book.coverUrl} alt={book.title} className="w-16 h-24 object-cover rounded-lg shadow-md" />
+                    <Image
+                      src={book.coverUrl}
+                      alt={book.title}
+                      width={64}
+                      height={96}
+                      className="w-16 h-24 object-cover rounded-lg shadow-md"
+                    />
                   ) : (
                     <div className="w-16 h-24 rounded-lg flex items-center justify-center" style={{
                       background: 'linear-gradient(135deg, #8b6f47 0%, #a08968 100%)'

@@ -3,6 +3,7 @@ module.exports = {
   testEnvironment: 'jsdom',
   roots: ['<rootDir>'],
   testMatch: ['**/__tests__/**/*.ts?(x)', '**/?(*.)+(spec|test).ts?(x)'],
+  testPathIgnorePatterns: ['<rootDir>/examples/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },

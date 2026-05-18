@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useTheme } from '@/contexts/ThemeContext';
 
 type GoalProgress = {
@@ -301,7 +302,13 @@ export default function GoalsPage() {
                   {goalProgress.recentBooks.map((book) => (
                     <div key={book.id} className="rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow">
                       {book.coverUrl ? (
-                        <img src={book.coverUrl} alt={book.title} className="w-full h-48 object-cover" />
+                        <Image
+                          src={book.coverUrl}
+                          alt={book.title}
+                          width={240}
+                          height={320}
+                          className="w-full h-48 object-cover"
+                        />
                       ) : (
                         <div className="w-full h-48 flex items-center justify-center" style={{
                           background: 'linear-gradient(135deg, #8b6f47 0%, #a08968 100%)'

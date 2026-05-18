@@ -3,7 +3,7 @@
 import { Book } from '@/lib/hooks/useBooks';
 import { ModernBookCard } from './ModernBookCard';
 import { BookOpen } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 interface VirtualizedBookGridProps {
   books: Book[];
@@ -24,8 +24,9 @@ export function VirtualizedBookGrid({
   selectedBookIds = new Set(),
   onToggleSelection
 }: VirtualizedBookGridProps) {
-  // Using CSS Grid for responsive layout - performs well for most library sizes
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 1200, height: 800 });
+  const [scrollTop, setScrollTop] = useState(0);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -39,6 +40,13 @@ export function VirtualizedBookGrid({
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
   }, []);
+
+  const handleScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    setScrollTop(container.scrollTop);
+  };
 
   if (books.length === 0) {
     return (
@@ -71,43 +79,70 @@ export function VirtualizedBookGrid({
   const gap = 28;
   const columnCount = Math.max(1, Math.floor(dimensions.width / (cardWidth + gap)));
   const rowCount = Math.max(1, Math.ceil(books.length / columnCount));
+  const rowHeight = cardHeight + gap;
+  const overscanRows = 2;
+  const visibleStartRow = Math.max(0, Math.floor(scrollTop / rowHeight) - overscanRows);
+  const visibleEndRow = Math.min(
+    rowCount,
+    Math.ceil((scrollTop + dimensions.height) / rowHeight) + overscanRows
+  );
+  const startIndex = visibleStartRow * columnCount;
+  const endIndex = Math.min(books.length, visibleEndRow * columnCount);
+  const visibleBooks = useMemo(() => books.slice(startIndex, endIndex), [books, startIndex, endIndex]);
+  const topSpacerHeight = visibleStartRow * rowHeight;
+  const bottomSpacerHeight = Math.max(0, (rowCount - visibleEndRow) * rowHeight);
 
   return (
-    <div style={{ width: '100%', height: dimensions.height, overflow: 'auto' }}>
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      style={{ width: '100%', height: dimensions.height, overflow: 'auto' }}
+    >
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${columnCount}, ${cardWidth}px)`,
-          gap: `${gap}px`,
           padding: `${gap}px`,
-          justifyContent: 'center',
         }}
       >
-        {books.map((book, index) => (
-          <div
-            key={book.id}
-            style={{
-              animation: 'scaleIn 0.4s ease-out forwards',
-              animationDelay: `${Math.min(index * 0.05, 2)}s`,
-              opacity: 0,
-            }}
-          >
-            <ModernBookCard
-              book={book}
-              onClick={() => {
-                if (isSelectionMode && onToggleSelection) {
-                  onToggleSelection(book.id);
-                } else {
-                  onBookClick(book);
-                }
-              }}
-              onUpdate={(updates) => onBookUpdate?.(book.id, updates)}
-              onAddToCollection={onAddToCollection}
-              isSelectionMode={isSelectionMode}
-              isSelected={selectedBookIds.has(book.id)}
-            />
-          </div>
-        ))}
+        <div style={{ height: topSpacerHeight }} />
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${columnCount}, ${cardWidth}px)`,
+            gap: `${gap}px`,
+            justifyContent: 'center',
+          }}
+        >
+          {visibleBooks.map((book, index) => {
+            const absoluteIndex = startIndex + index;
+
+            return (
+              <div
+                key={book.id}
+                style={{
+                  animation: 'scaleIn 0.4s ease-out forwards',
+                  animationDelay: `${Math.min(absoluteIndex * 0.05, 2)}s`,
+                  opacity: 0,
+                }}
+              >
+                <ModernBookCard
+                  book={book}
+                  onClick={() => {
+                    if (isSelectionMode && onToggleSelection) {
+                      onToggleSelection(book.id);
+                    } else {
+                      onBookClick(book);
+                    }
+                  }}
+                  onUpdate={(updates) => onBookUpdate?.(book.id, updates)}
+                  onAddToCollection={onAddToCollection}
+                  isSelectionMode={isSelectionMode}
+                  isSelected={selectedBookIds.has(book.id)}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ height: bottomSpacerHeight }} />
       </div>
     </div>
   );

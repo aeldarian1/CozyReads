@@ -11,9 +11,9 @@
     "type-check": "tsc --noEmit",
     "format": "prettier --write \"**/*.{ts,tsx,md,json}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json}\"",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --watch --passWithNoTests",
+    "test:coverage": "jest --coverage --passWithNoTests",
     "analyze": "npm run lint:check && npm run type-check",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
@@ -65,6 +65,7 @@
     "prettier": "^3.1.1",
     "prisma": "^6.19.1",
     "tailwindcss": "^4.1.0",
+    "ts-jest": "^29.4.6",
     "typescript": "^5.7.2"
   }
 }

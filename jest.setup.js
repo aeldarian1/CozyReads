@@ -1,4 +1,5 @@
-import '@testing-library/jest-dom';
+require('@testing-library/jest-dom');
+const React = require('react');
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -14,8 +15,5 @@ jest.mock('next/navigation', () => ({
 // Mock next/image
 jest.mock('next/image', () => ({
   __esModule: true,
-  default: (props) => {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img {...props} />;
-  },
+  default: (props) => React.createElement('img', props),
 }));

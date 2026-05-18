@@ -47,6 +47,26 @@ const AdvancedImportModal = dynamic(() => import('@/components/AdvancedImportMod
 // Use the Book type from the hooks file
 export type Book = BookType;
 
+const SERVER_SEARCH_FIELDS = new Set(['title', 'author', 'genre']);
+
+const DEFAULT_FILTERS: AdvancedFilters = {
+  searchQuery: '',
+  searchFields: ['title', 'author'],
+  statusFilter: '',
+  ratingRange: [0, 5],
+  pageRange: [0, 2000],
+  dateAddedFrom: '',
+  dateAddedTo: '',
+  dateFinishedFrom: '',
+  dateFinishedTo: '',
+  genreFilter: '',
+  collectionFilter: '',
+};
+
+function getSortOrder(sortBy: string): 'asc' | 'desc' {
+  return sortBy === 'title' || sortBy === 'author' ? 'asc' : 'desc';
+}
+
 function HomeContent() {
   const { theme, toggleTheme } = useTheme();
   const { confirm, alert } = useDialog();
@@ -54,14 +74,39 @@ function HomeContent() {
   const searchParams = useSearchParams();
 
   // Use React Query hooks for data fetching and mutations
-  const { data: booksData, isLoading: isBooksLoading, refetch: refetchBooks } = useBooks({ limit: 1000 });
+  const [filters, setFilters] = useState<AdvancedFilters>(DEFAULT_FILTERS);
+  const [sortBy, setSortBy] = useState('dateAdded');
+
+  const shouldUseServerSearch =
+    filters.searchQuery.length >= 2 && filters.searchFields.every((field) => SERVER_SEARCH_FIELDS.has(field));
+
+  const booksQueryFilters = useMemo(() => ({
+    limit: 1000,
+    search: shouldUseServerSearch ? filters.searchQuery : undefined,
+    status: filters.statusFilter || undefined,
+    ratingMin: filters.ratingRange[0] > 0 ? filters.ratingRange[0] : undefined,
+    ratingMax: filters.ratingRange[1] < 5 ? filters.ratingRange[1] : undefined,
+    pageMin: filters.pageRange[0] > 0 ? filters.pageRange[0] : undefined,
+    pageMax: filters.pageRange[1] < 2000 ? filters.pageRange[1] : undefined,
+    dateAddedFrom: filters.dateAddedFrom || undefined,
+    dateAddedTo: filters.dateAddedTo || undefined,
+    dateFinishedFrom: filters.dateFinishedFrom || undefined,
+    dateFinishedTo: filters.dateFinishedTo || undefined,
+    genre: filters.genreFilter || undefined,
+    collection: filters.collectionFilter || undefined,
+    sortBy: sortBy as 'dateAdded' | 'title' | 'author' | 'rating',
+    sortOrder: getSortOrder(sortBy),
+  }), [filters.collectionFilter, filters.genreFilter, filters.ratingRange, filters.searchFields, filters.searchQuery, filters.statusFilter, shouldUseServerSearch, sortBy]);
+
+  const { data: allBooksData } = useBooks({ limit: 1000, sortBy: 'dateAdded', sortOrder: 'desc' });
+  const { data: booksData, isLoading: isBooksLoading, refetch: refetchBooks } = useBooks(booksQueryFilters);
   const updateBookMutation = useUpdateBook();
   const deleteBookMutation = useDeleteBook();
 
   // Extract books from the response
+  const allBooks = allBooksData?.data || [];
   const books = booksData?.data || [];
 
-  // Removed filteredBooks state - now using useMemo below
   const [collections, setCollections] = useState<{ id: string; name: string; icon: string; color: string }[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -71,7 +116,6 @@ function HomeContent() {
   const [selectedBookIds, setSelectedBookIds] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [editingBook, setEditingBook] = useState<Book | null>(null);
-  const [sortBy, setSortBy] = useState('dateAdded');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [quickEditMenu, setQuickEditMenu] = useState<{
     book: Book;
@@ -94,39 +138,29 @@ function HomeContent() {
     localStorage.setItem('cozyreads-view-mode', newView);
   };
 
-  const [filters, setFilters] = useState<AdvancedFilters>({
-    searchQuery: '',
-    searchFields: ['title', 'author'],
-    statusFilter: '',
-    ratingRange: [0, 5],
-    pageRange: [0, 2000],
-    dateAddedFrom: '',
-    dateAddedTo: '',
-    dateFinishedFrom: '',
-    dateFinishedTo: '',
-    genreFilter: '',
-    collectionFilter: '',
-  });
-
-  // Configure Fuse.js for fuzzy search
+  // Keep only the filters not yet handled by the API endpoint.
   const fuse = useMemo(() => {
+    if (!filters.searchQuery || shouldUseServerSearch) {
+      return null;
+    }
+
     return new Fuse(books, {
       keys: filters.searchFields,
-      threshold: 0.4, // 0 = exact match, 1 = match anything
+      threshold: 0.4,
       distance: 100,
       minMatchCharLength: 2,
       includeScore: true,
     });
-  }, [books, filters.searchFields]);
+  }, [books, filters.searchFields, filters.searchQuery, shouldUseServerSearch]);
 
   // Extract available genres
   const availableGenres = useMemo(() => {
     const genres = new Set<string>();
-    books.forEach((book) => {
+    allBooks.forEach((book) => {
       if (book.genre) genres.add(book.genre);
     });
     return Array.from(genres).sort();
-  }, [books]);
+  }, [allBooks]);
 
   // Load collections on mount (books are loaded by useBooks hook)
   useEffect(() => {
@@ -182,91 +216,15 @@ function HomeContent() {
     }
   };
 
-  // Apply filters with useMemo to prevent infinite loops
   const filteredBooks = useMemo(() => {
-    let filtered = [...books];
-
-    // 1. Fuzzy search with Fuse.js
-    if (filters.searchQuery && filters.searchQuery.length >= 2) {
-      const results = fuse.search(filters.searchQuery);
-      const matchedIds = new Set(results.map((r) => r.item.id));
-      filtered = filtered.filter((book) => matchedIds.has(book.id));
+    if (!filters.searchQuery || filters.searchQuery.length < 2 || !fuse) {
+      return books;
     }
 
-    // 2. Status filter
-    if (filters.statusFilter) {
-      filtered = filtered.filter((book) => book.readingStatus === filters.statusFilter);
-    }
-
-    // 3. Genre filter
-    if (filters.genreFilter) {
-      filtered = filtered.filter((book) => book.genre === filters.genreFilter);
-    }
-
-    // 4. Collection filter
-    if (filters.collectionFilter) {
-      filtered = filtered.filter((book) =>
-        book.collections?.some(({ collection }) => collection.id === filters.collectionFilter)
-      );
-    }
-
-    // 5. Rating range filter
-    filtered = filtered.filter(
-      (book) => book.rating >= filters.ratingRange[0] && book.rating <= filters.ratingRange[1]
-    );
-
-    // 6. Page count range filter
-    filtered = filtered.filter((book) => {
-      const pages = book.totalPages || 0;
-      return pages >= filters.pageRange[0] && pages <= filters.pageRange[1];
-    });
-
-    // 7. Date added range filter
-    if (filters.dateAddedFrom) {
-      filtered = filtered.filter(
-        (book) => new Date(book.dateAdded) >= new Date(filters.dateAddedFrom)
-      );
-    }
-    if (filters.dateAddedTo) {
-      filtered = filtered.filter(
-        (book) => new Date(book.dateAdded) <= new Date(filters.dateAddedTo)
-      );
-    }
-
-    // 8. Date finished range filter
-    if (filters.dateFinishedFrom) {
-      filtered = filtered.filter(
-        (book) => book.dateFinished && new Date(book.dateFinished) >= new Date(filters.dateFinishedFrom)
-      );
-    }
-    if (filters.dateFinishedTo) {
-      filtered = filtered.filter(
-        (book) => book.dateFinished && new Date(book.dateFinished) <= new Date(filters.dateFinishedTo)
-      );
-    }
-
-    // 9. Apply sorting
-    filtered.sort((a, b) => {
-      switch (sortBy) {
-        case 'title':
-          return a.title.localeCompare(b.title);
-        case 'author':
-          return a.author.localeCompare(b.author);
-        case 'rating':
-          return b.rating - a.rating; // High to low
-        case 'dateFinished':
-          if (!a.dateFinished && !b.dateFinished) return 0;
-          if (!a.dateFinished) return 1;
-          if (!b.dateFinished) return -1;
-          return new Date(b.dateFinished).getTime() - new Date(a.dateFinished).getTime();
-        case 'dateAdded':
-        default:
-          return new Date(b.dateAdded).getTime() - new Date(a.dateAdded).getTime();
-      }
-    });
-
-    return filtered;
-  }, [books, filters, sortBy, fuse]);
+    const results = fuse.search(filters.searchQuery);
+    const matchedIds = new Set(results.map((result) => result.item.id));
+    return books.filter((book) => matchedIds.has(book.id));
+  }, [books, filters.searchQuery, fuse]);
 
   const handleAddBook = () => {
     setEditingBook(null);
@@ -346,7 +304,7 @@ function HomeContent() {
   const handleBulkDelete = async () => {
     // Filter out any IDs that don't exist in current books
     const validBookIds = Array.from(selectedBookIds).filter(id =>
-      books.some(book => book.id === id)
+      allBooks.some(book => book.id === id)
     );
 
     if (validBookIds.length === 0) {
@@ -424,7 +382,7 @@ function HomeContent() {
   const handleBulkAddToCollection = async (collectionId: string) => {
     // Filter out any IDs that don't exist in current books
     const validBookIds = Array.from(selectedBookIds).filter(id =>
-      books.some(book => book.id === id)
+      allBooks.some(book => book.id === id)
     );
 
     if (validBookIds.length === 0) {
@@ -465,7 +423,7 @@ function HomeContent() {
   const handleBulkStatusChange = async (status: string) => {
     // Filter out any IDs that don't exist in current books
     const validBookIds = Array.from(selectedBookIds).filter(id =>
-      books.some(book => book.id === id)
+      allBooks.some(book => book.id === id)
     );
 
     if (validBookIds.length === 0) {
@@ -529,7 +487,7 @@ function HomeContent() {
   };
 
   const handleBulkExport = () => {
-    const selectedBooks = books.filter(book => selectedBookIds.has(book.id));
+    const selectedBooks = allBooks.filter(book => selectedBookIds.has(book.id));
     const csv = convertBooksToCSV(selectedBooks);
     downloadFile(csv, 'cozyreads-export.csv', 'text/csv');
   };
@@ -621,11 +579,11 @@ function HomeContent() {
 
   // Calculate stats for ModernDashboard
   const currentlyReading = useMemo(() => {
-    return books.filter(book => book.readingStatus === 'Currently Reading');
-  }, [books]);
+    return allBooks.filter(book => book.readingStatus === 'Currently Reading');
+  }, [allBooks]);
 
   const stats = useMemo(() => {
-    const finished = books.filter(b => b.readingStatus === 'Finished');
+    const finished = allBooks.filter(b => b.readingStatus === 'Finished');
     const pagesRead = finished.reduce((sum, book) => sum + (book.totalPages || 0), 0);
 
     // Calculate streak (simplified - counts consecutive days with finished books)
@@ -641,20 +599,20 @@ function HomeContent() {
     }
 
     return {
-      totalBooks: books.length,
+      totalBooks: allBooks.length,
       booksRead: finished.length,
       pagesRead,
       currentStreak: streak,
     };
-  }, [books]);
+  }, [allBooks]);
 
   // Calculate counts for QuickFilterTabs
   const filterCounts = useMemo(() => ({
-    all: books.length,
-    wantToRead: books.filter(b => b.readingStatus === 'Want to Read').length,
+    all: allBooks.length,
+    wantToRead: allBooks.filter(b => b.readingStatus === 'Want to Read').length,
     currentlyReading: currentlyReading.length,
-    finished: books.filter(b => b.readingStatus === 'Finished').length,
-  }), [books, currentlyReading]);
+    finished: allBooks.filter(b => b.readingStatus === 'Finished').length,
+  }), [allBooks, currentlyReading]);
 
   // Keyboard shortcuts
   useKeyboardShortcuts([
@@ -713,19 +671,7 @@ function HomeContent() {
           filters={filters}
           onFiltersChange={setFilters}
           onClearFilters={() =>
-            setFilters({
-              searchQuery: '',
-              searchFields: ['title', 'author'],
-              statusFilter: '',
-              ratingRange: [0, 5],
-              pageRange: [0, 2000],
-              dateAddedFrom: '',
-              dateAddedTo: '',
-              dateFinishedFrom: '',
-              dateFinishedTo: '',
-              genreFilter: '',
-              collectionFilter: '',
-            })
+            setFilters(DEFAULT_FILTERS)
           }
           availableGenres={availableGenres}
           availableCollections={collections}

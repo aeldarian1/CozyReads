@@ -18,7 +18,14 @@ export async function GET(request: NextRequest) {
     // Filters
     const search = searchParams.get('search') || '';
     const status = searchParams.get('status') || '';
-    const rating = searchParams.get('rating') || '';
+    const ratingMin = searchParams.get('ratingMin');
+    const ratingMax = searchParams.get('ratingMax');
+    const pageMin = searchParams.get('pageMin');
+    const pageMax = searchParams.get('pageMax');
+    const dateAddedFrom = searchParams.get('dateAddedFrom');
+    const dateAddedTo = searchParams.get('dateAddedTo');
+    const dateFinishedFrom = searchParams.get('dateFinishedFrom');
+    const dateFinishedTo = searchParams.get('dateFinishedTo');
     const genre = searchParams.get('genre') || '';
     const collection = searchParams.get('collection') || '';
 
@@ -40,8 +47,32 @@ export async function GET(request: NextRequest) {
       where.readingStatus = status;
     }
 
-    if (rating) {
-      where.rating = { gte: parseInt(rating) };
+    if (ratingMin || ratingMax) {
+      where.rating = {
+        ...(ratingMin ? { gte: parseInt(ratingMin) } : {}),
+        ...(ratingMax ? { lte: parseInt(ratingMax) } : {}),
+      };
+    }
+
+    if (pageMin || pageMax) {
+      where.totalPages = {
+        ...(pageMin ? { gte: parseInt(pageMin) } : {}),
+        ...(pageMax ? { lte: parseInt(pageMax) } : {}),
+      };
+    }
+
+    if (dateAddedFrom || dateAddedTo) {
+      where.dateAdded = {
+        ...(dateAddedFrom ? { gte: new Date(dateAddedFrom) } : {}),
+        ...(dateAddedTo ? { lte: new Date(dateAddedTo) } : {}),
+      };
+    }
+
+    if (dateFinishedFrom || dateFinishedTo) {
+      where.dateFinished = {
+        ...(dateFinishedFrom ? { gte: new Date(dateFinishedFrom) } : {}),
+        ...(dateFinishedTo ? { lte: new Date(dateFinishedTo) } : {}),
+      };
     }
 
     if (genre) {
